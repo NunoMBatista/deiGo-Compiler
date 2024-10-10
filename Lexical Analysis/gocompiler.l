@@ -65,16 +65,22 @@ IDENTIFIER  {LETTER}({DECLIT}|{LETTER})*
 NATURAL     ({DECLIT}+)|({OCTALPREFIX}{OCTAL}+)|({HEXPREFIX}{HEX}+)
 
 EXPONENT    [eE][+-]?{DECLIT}+
-DECIMAL     [{DECLIT}+("."{DECLIT}+)?|({EXPONENT})?]
+DECIMAL     ({DECLIT}+"."{DECLIT}*{EXPONENT}?)|("."{DECLIT}+{EXPONENT}?)|({DECLIT}+{EXPONENT})
 
 %%
 
 {SEMICOLON}         { printf("SEMICOLON\n"); }
+{COMMA}             { printf("COMMA\n"); }
+{ASSIGN}            { printf("ASSIGN\n"); }
+
 {BLANKID}           { printf("BLANKID\n"); }
 {RESERVED}          { printf("%s\n", to_uppercase(yytext)); }
 
+
 {IDENTIFIER}        { printf("IDENTIFIER(%s)\n", yytext); }
 {NATURAL}           { printf("NATURAL(%s)\n", yytext); }
+{DECIMAL}           { printf("DECIMAL(%s)\n", yytext); }
+
 
 %%
 
