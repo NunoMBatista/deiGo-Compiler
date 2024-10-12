@@ -3,124 +3,185 @@
     #include <stdio.h>
     #include <string.h>
 
-    #define YY_USER_ACTION curcol += yyleng;
+    // #define YY_USER_ACTION \
+    //     curcol += yyleng; \
 
+    int curline = 1; 
+    int curcol = 1;
+    int add_semicolon = 0; 
 
-    int line = 1; 
-    int curcol = 1; 
+    char str_buffer[1024];
+    int str_buffer_index = 0;
+
+    int str_error = 0;
+
+    void add_str_buffer(char *add, int length) {
+        strncpy(&str_buffer[str_buffer_index], add, length);
+        str_buffer_index += length;
+    }
+
+    void reset_str_buffer() {
+        str_buffer_index = 0;
+        str_buffer[0] = '\0';
+    }
+
 %}
 
-SEMICOLON   ";"
-COMMA       ","
-BLANKID     "_"
-ASSIGN      "="
-STAR        "*"
-DIV         "/"
-MINUS       "-"
-PLUS        "+"
-EQ          "=="
-GE          ">="
-GT          ">"
-LBRACE      "{"
-LE          "<="
-LPAR        "("
-LSQ         "["
-LT          "<"
-MOD         "%"
-NE          "!="
-NOT         "!"
-AND         "&&"
-OR          "||"
-RBRACE      "}"
-RSQ         "]"
-PACKAGE     "package"
-RETURN      "return"
-ELSE        "else"
-FOR         "for"
-IF          "if"
-VAR         "var"
-INT         "int"
-FLOAT32     "float32"
-BOOL        "bool"
-STRING      "string"
-PRINT       "fmt.Println"
-PARSEINT    "strconv.Atoi"
-FUNC        "func"
-CMDARGS     "os.Args"
-RESERVED    "++"|"--"|"break"|"case"|"chan"|"const"|"continue"|"default"|"defer"|"fallthrough"|"go"|"goto"|"import"|"interface"|"map"|"range"|"select"|"struct"|"switch"|"type"
+SEMICOLON                           ";"
+COMMA                               ","
+BLANKID                             "_"
+ASSIGN                              "="
+STAR                                "*"
+DIV                                 "/"
+MINUS                               "-"
+PLUS                                "+"
+EQ                                  "=="
+GE                                  ">="
+GT                                  ">"
+LBRACE                              "{"
+LE                                  "<="
+LPAR                                "("
+LSQ                                 "["
+LT                                  "<"
+MOD                                 "%"
+NE                                  "!="
+NOT                                 "!"
+AND                                 "&&"
+OR                                  "||"
+RBRACE                              "}"
+RPAR                                ")"
+RSQ                                 "]"
+PACKAGE                             "package"
+RETURN                              "return"
+ELSE                                "else"
+FOR                                 "for"
+IF                                  "if"
+VAR                                 "var"
+INT                                 "int"
+FLOAT32                             "float32"
+BOOL                                "bool"
+STRING                              "string"
+PRINT                               "fmt.Println"
+PARSEINT                            "strconv.Atoi"
+FUNC                                "func"
+CMDARGS                             "os.Args"
+RESERVED                            "++"|"--"|"break"|"case"|"chan"|"const"|"continue"|"default"|"defer"|"fallthrough"|"go"|"goto"|"import"|"interface"|"map"|"range"|"select"|"struct"|"switch"|"type"
 
-IGNORE      " "|"\t"
-NEWLINE     "\n"|"\r"|"\r\n"
+IGNORE                              " "|"\t"
+NEWLINE                             "\n"|"\r"|"\r\n"
 
 
-LETTER       [a-z]|[A-Z]|"_"
-DECLIT       [0-9]
-OCTALPREFIX  "0"
-OCTAL        [0-7]
-HEX          [0-9a-fA-F]+
-HEXPREFIX    "0x"|"0X"
+LETTER                              [a-z]|[A-Z]|"_"
+DECLIT                              [0-9]
 
-IDENTIFIER  {LETTER}({DECLIT}|{LETTER})*
-NATURAL     ({DECLIT}+)|({OCTALPREFIX}{OCTAL}+)|({HEXPREFIX}{HEX}+)
 
-EXPONENT    [eE][+-]?{DECLIT}+
-DECIMAL     ({DECLIT}+"."{DECLIT}*{EXPONENT}?)|("."{DECLIT}+{EXPONENT}?)|({DECLIT}+{EXPONENT})
+OCTALPREFIX                         "0"
+OCTAL                               {OCTALPREFIX}[0-7]+
+INVALID_OCTAL                       {OCTALPREFIX}[0-7]*[^0-7][0-7]*
+
+HEXPREFIX                            "0x"|"0X"
+HEX                                  {HEXPREFIX}[0-9a-fA-F]+
+
+IDENTIFIER                          {LETTER}({DECLIT}|{LETTER})*
+NATURAL                             0|([1-9]{DECLIT}*)|{OCTAL}|{HEX}
+
+EXPONENT                            [eE][+-]?{DECLIT}+
+DECIMAL                             ({DECLIT}+"."{DECLIT}*{EXPONENT}?)|("."{DECLIT}+{EXPONENT}?)|({DECLIT}+{EXPONENT})
+
+STRLIT                              ([^\"\\n])
+INVALID_ESC                         \\[^fnrt\\"]
+QUOTE                               "\""
 
 %X SINGLE_LINE_COMMENT
 %X MULTI_LINE_COMMENT
+%X STRING
 
 %%
 
-"//"                                { BEGIN SINGLE_LINE_COMMENT; }
+"//"                                { BEGIN(SINGLE_LINE_COMMENT); curcol += yyleng; }
+<SINGLE_LINE_COMMENT>{NEWLINE}      { BEGIN(INITIAL); if(add_semicolon) printf("SEMICOLON\n"); add_semicolon = 0; curline++; curcol = 1; }
 <SINGLE_LINE_COMMENT>.              { ; }
-<SINGLE_LINE_COMMENT>{NEWLINE}      { BEGIN INITIAL; }
+
+"/*"                                { BEGIN(MULTI_LINE_COMMENT); curcol += yyleng; }
+<MULTI_LINE_COMMENT>"*/"            { BEGIN(INITIAL); if(add_semicolon) printf("SEMICOLON\n"); add_semicolon = 0; curcol += yyleng; }
+<MULTI_LINE_COMMENT>.               { curcol += yyleng; }
+<MULTI_LINE_COMMENT>{NEWLINE}       { curline++; curcol = 1; }
+<MULTI_LINE_COMMENT><<EOF>>         { printf("Line %d, column %d: unterminated comment\n", curline, curcol); BEGIN(INITIAL); }
+
+{QUOTE}                             { BEGIN(STRING); add_semicolon = 1; add_str_buffer(yytext, yyleng); curcol += yyleng; str_error = 0; }
+<STRING>{QUOTE}                     { 
+                                        add_str_buffer(yytext, yyleng); 
+                                        curcol += yyleng; 
+                                        str_buffer[str_buffer_index] = '\0';
+                                        
+                                        if(!str_error){
+                                            printf("STRLIT(%s)\n", str_buffer); 
+                                            add_semicolon = 1; 
+                                        }
+                                        else{
+                                            add_semicolon = 0;
+                                        }
+
+                                        reset_str_buffer();
+                                        BEGIN(INITIAL); 
+                                    }
+<STRING><<EOF>>                     { printf("Line %d, column %d: unterminated string literal\n", curline, curcol - str_buffer_index); BEGIN(INITIAL); reset_str_buffer(); }
+<STRING>{NEWLINE}                   { printf("Line %d, column %d: unterminated string literal\n", curline, curcol - str_buffer_index); BEGIN(INITIAL); curline++; curcol = 1; reset_str_buffer(); }
+<STRING>{INVALID_ESC}               { printf("Line %d, column %d: invalid escape sequence (%s)\n", curline, curcol, yytext); str_error = 1; /*BEGIN(INITIAL); reset_str_buffer();*/ }
+<STRING>{STRLIT}                    { add_str_buffer(yytext, yyleng); curcol += yyleng; }
+
+{SEMICOLON}                         { printf("SEMICOLON\n"); add_semicolon = 0; }
+{COMMA}                             { printf("COMMA\n"); add_semicolon = 0; }
+{ASSIGN}                            { printf("ASSIGN\n"); add_semicolon = 0; }
+{STAR}                              { printf("STAR\n"); add_semicolon = 0; }
+{DIV}                               { printf("DIV\n"); add_semicolon = 0; }
+{MINUS}                             { printf("MINUS\n"); add_semicolon = 0; }
+{PLUS}                              { printf("PLUS\n"); add_semicolon = 0; }
+{EQ}                                { printf("EQ\n"); add_semicolon = 0; }
+{GE}                                { printf("GE\n"); add_semicolon = 0; }
+{GT}                                { printf("GT\n"); add_semicolon = 0; }
+{LBRACE}                            { printf("LBRACE\n"); add_semicolon = 0; }
+{LE}                                { printf("LE\n"); add_semicolon = 0; }
+{LPAR}                              { printf("LPAR\n"); add_semicolon = 0; }
+{LSQ}                               { printf("LSQ\n"); add_semicolon = 0; }
+{LT}                                { printf("LT\n"); add_semicolon = 0; }
+{MOD}                               { printf("MOD\n"); add_semicolon = 0; }
+{NE}                                { printf("NE\n"); add_semicolon = 0; }
+{NOT}                               { printf("NOT\n"); add_semicolon = 0; }
+{AND}                               { printf("AND\n"); add_semicolon = 0; }
+{OR}                                { printf("OR\n"); add_semicolon = 0; }
+{PACKAGE}                           { printf("PACKAGE\n"); add_semicolon = 0; }
+{ELSE}                              { printf("ELSE\n"); add_semicolon = 0; }
+{FOR}                               { printf("FOR\n"); add_semicolon = 0; }
+{IF}                                { printf("IF\n"); add_semicolon = 0; }
+{VAR}                               { printf("VAR\n"); add_semicolon = 0; }
+{INT}                               { printf("INT\n"); add_semicolon = 0; }
+{FLOAT32}                           { printf("FLOAT32\n"); add_semicolon = 0; }
+{BOOL}                              { printf("BOOL\n"); add_semicolon = 0; }
+{STRING}                            { printf("STRING\n"); add_semicolon = 0; }
+{PRINT}                             { printf("PRINT\n"); add_semicolon = 0; }
+{PARSEINT}                          { printf("PARSEINT\n"); add_semicolon = 0; }
+{FUNC}                              { printf("FUNC\n"); add_semicolon = 0; }
+{CMDARGS}                           { printf("CMDARGS\n"); add_semicolon = 0; }
+{IGNORE}                            { curcol += yyleng; }
+
+{BLANKID}                           { printf("BLANKID\n"); add_semicolon = 0; }
+{RESERVED}                          { printf("RESERVED(%s)\n", yytext); add_semicolon = 0; }
+
+{RBRACE}                            { printf("RBRACE\n"); add_semicolon = 1; }
+{RPAR}                              { printf("RPAR\n"); add_semicolon = 1; }
+{RSQ}                               { printf("RSQ\n"); add_semicolon = 1; }
+{RETURN}                            { printf("RETURN\n"); add_semicolon = 1; }
+{IDENTIFIER}                        { printf("IDENTIFIER(%s)\n", yytext); add_semicolon = 1; }
+
+{INVALID_OCTAL}                     { printf("Line %d, column %d: invalid octal constant (%s)\n", curline, curcol, yytext); }
+{NATURAL}                           { printf("NATURAL(%s)\n", yytext); add_semicolon = 1; }
+{DECIMAL}                           { printf("DECIMAL(%s)\n", yytext); add_semicolon = 1; }
+{NEWLINE}                           { curline++; curcol = 1; if(add_semicolon) printf("SEMICOLON\n"); add_semicolon = 0; }
+
+.                                   { printf("Line %d, column %d: illegal character (%s)\n", curline, curcol, yytext); }
 
 
-{SEMICOLON}                         { printf("SEMICOLON\n"); }
-{COMMA}                             { printf("COMMA\n"); }
-{ASSIGN}                            { printf("ASSIGN\n"); }
-{STAR}                              { printf("STAR\n"); }
-{DIV}                               { printf("DIV\n"); }
-{MINUS}                             { printf("MINUS\n"); }
-{PLUS}                              { printf("PLUS\n"); }
-{EQ}                                { printf("EQ\n"); }
-{GE}                                { printf("GE\n"); }
-{GT}                                { printf("GT\n"); }
-{LBRACE}                            { printf("LBRACE\n"); }
-{LE}                                { printf("LE\n"); }
-{LPAR}                              { printf("LPAR\n"); }
-{LSQ}                               { printf("LSQ\n"); }
-{LT}                                { printf("LT\n"); }
-{MOD}                               { printf("MOD\n"); }
-{NE}                                { printf("NE\n"); }
-{NOT}                               { printf("NOT\n"); }
-{AND}                               { printf("AND\n"); }
-{OR}                                { printf("OR\n"); }
-{RBRACE}                            { printf("RBRACE\n"); }
-{RSQ}                               { printf("RSQ\n"); }
-{PACKAGE}                           { printf("PACKAGE\n"); }
-{RETURN}                            { printf("RETURN\n"); }
-{ELSE}                              { printf("ELSE\n"); }
-{FOR}                               { printf("FOR\n"); }
-{IF}                                { printf("IF\n"); }
-{VAR}                               { printf("VAR\n"); }
-{INT}                               { printf("INT\n"); }
-{FLOAT32}                           { printf("FLOAT32\n"); }
-{BOOL}                              { printf("BOOL\n"); }
-{STRING}                            { printf("STRING\n"); }
-{PRINT}                             { printf("PRINT\n"); }
-{PARSEINT}                          { printf("PARSEINT\n"); }
-{FUNC}                              { printf("FUNC\n"); }
-{CMDARGS}                           { printf("CMDARGS\n"); }
-{IGNORE}                            { ; }
-{NEWLINE}                           { line++; curcol = 1; }
-
-{BLANKID}                           { printf("BLANKID\n"); }
-{RESERVED}                          { printf("%s\n", yytext); }
-
-{IDENTIFIER}                        { printf("IDENTIFIER(%s)\n", yytext); }
-{NATURAL}                           { printf("NATURAL(%s)\n", yytext); }
-{DECIMAL}                           { printf("DECIMAL(%s)\n", yytext); }
 
 %%
 
