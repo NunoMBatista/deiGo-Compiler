@@ -46,7 +46,6 @@ typedef int16_t flex_int16_t;
 typedef uint16_t flex_uint16_t;
 typedef int32_t flex_int32_t;
 typedef uint32_t flex_uint32_t;
-typedef uint64_t flex_uint64_t;
 #else
 typedef signed char flex_int8_t;
 typedef short int flex_int16_t;
@@ -155,7 +154,7 @@ typedef struct yy_buffer_state *YY_BUFFER_STATE;
 typedef size_t yy_size_t;
 #endif
 
-extern yy_size_t yyleng;
+extern int yyleng;
 
 extern FILE *yyin, *yyout;
 
@@ -198,7 +197,7 @@ struct yy_buffer_state
 	/* Number of characters read into yy_ch_buf, not including EOB
 	 * characters.
 	 */
-	yy_size_t yy_n_chars;
+	int yy_n_chars;
 
 	/* Whether we "own" the buffer - i.e., we know we created it,
 	 * and can realloc() it to grow it, and should free() it to
@@ -267,8 +266,8 @@ static YY_BUFFER_STATE * yy_buffer_stack = NULL; /**< Stack as an array. */
 
 /* yy_hold_char holds the character lost when yytext is formed. */
 static char yy_hold_char;
-static yy_size_t yy_n_chars;		/* number of characters read into yy_ch_buf */
-yy_size_t yyleng;
+static int yy_n_chars;		/* number of characters read into yy_ch_buf */
+int yyleng;
 
 /* Points to current character in buffer. */
 static char *yy_c_buf_p = NULL;
@@ -295,7 +294,7 @@ static void yy_init_buffer ( YY_BUFFER_STATE b, FILE *file  );
 
 YY_BUFFER_STATE yy_scan_buffer ( char *base, yy_size_t size  );
 YY_BUFFER_STATE yy_scan_string ( const char *yy_str  );
-YY_BUFFER_STATE yy_scan_bytes ( const char *bytes, yy_size_t len  );
+YY_BUFFER_STATE yy_scan_bytes ( const char *bytes, int len  );
 
 void *yyalloc ( yy_size_t  );
 void *yyrealloc ( void *, yy_size_t  );
@@ -348,7 +347,7 @@ static void yynoreturn yy_fatal_error ( const char* msg  );
  */
 #define YY_DO_BEFORE_ACTION \
 	(yytext_ptr) = yy_bp; \
-	yyleng = (yy_size_t) (yy_cp - yy_bp); \
+	yyleng = (int) (yy_cp - yy_bp); \
 	(yy_hold_char) = *yy_cp; \
 	*yy_cp = '\0'; \
 	(yy_c_buf_p) = yy_cp;
@@ -628,6 +627,7 @@ char *yytext;
     #define YY_USER_ACTION \
         curcol += yyleng; \
         
+    int verbose = 0;
 
     int curline = 1; 
     int curcol = 1;
@@ -654,15 +654,9 @@ char *yytext;
         str_buffer[0] = '\0';
     }
 
-<<<<<<< HEAD
-#line 656 "lex.yy.c"
+#line 657 "lex.yy.c"
 
-#line 658 "lex.yy.c"
-=======
-#line 649 "lex.yy.c"
-
-#line 651 "lex.yy.c"
->>>>>>> 9ce9b1846e1e297bd3378106813e149874b40cf0
+#line 659 "lex.yy.c"
 
 #define INITIAL 0
 #define SINGLE_LINE_COMMENT 1
@@ -704,7 +698,7 @@ FILE *yyget_out ( void );
 
 void yyset_out  ( FILE * _out_str  );
 
-			yy_size_t yyget_leng ( void );
+			int yyget_leng ( void );
 
 char *yyget_text ( void );
 
@@ -773,7 +767,7 @@ static int input ( void );
 	if ( YY_CURRENT_BUFFER_LVALUE->yy_is_interactive ) \
 		{ \
 		int c = '*'; \
-		yy_size_t n; \
+		int n; \
 		for ( n = 0; n < max_size && \
 			     (c = getc( yyin )) != EOF && c != '\n'; ++n ) \
 			buf[n] = (char) c; \
@@ -882,16 +876,11 @@ YY_DECL
 		}
 
 	{
-#line 110 "gocompiler.l"
+#line 111 "gocompiler.l"
 
 
 
-<<<<<<< HEAD
-#line 882 "lex.yy.c"
-=======
-
-#line 876 "lex.yy.c"
->>>>>>> 9ce9b1846e1e297bd3378106813e149874b40cf0
+#line 883 "lex.yy.c"
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
@@ -950,18 +939,22 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 113 "gocompiler.l"
+#line 114 "gocompiler.l"
 { BEGIN(SINGLE_LINE_COMMENT); }
+	YY_BREAK
+case YY_STATE_EOF(SINGLE_LINE_COMMENT):
+#line 115 "gocompiler.l"
+{ BEGIN(INITIAL); printf("Line %d, column %d: unterminated comment\n", curline, curcol - yyleng); add_semicolon = 0; }
 	YY_BREAK
 case 2:
 /* rule 2 can match eol */
 YY_RULE_SETUP
-#line 114 "gocompiler.l"
-{ BEGIN(INITIAL); if(add_semicolon) printf("SEMICOLON\n"); add_semicolon = 0; curline++; curcol = 1; }
+#line 116 "gocompiler.l"
+{ BEGIN(INITIAL); if(add_semicolon && verbose) printf("SEMICOLON\n"); add_semicolon = 0; curline++; curcol = 1; }
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 115 "gocompiler.l"
+#line 117 "gocompiler.l"
 { ; }
 	YY_BREAK
 case 4:
@@ -969,56 +962,60 @@ YY_RULE_SETUP
 #line 119 "gocompiler.l"
 { BEGIN(MULTI_LINE_COMMENT); ml_comment_start_line = curline; ml_comment_start_col = curcol - yyleng; }
 	YY_BREAK
+case YY_STATE_EOF(MULTI_LINE_COMMENT):
+#line 120 "gocompiler.l"
+{ printf("Line %d, column %d: unterminated comment\n", ml_comment_start_line, ml_comment_start_col); BEGIN(INITIAL); add_semicolon = 0; }
+	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 120 "gocompiler.l"
+#line 121 "gocompiler.l"
 { BEGIN(INITIAL); }
 	YY_BREAK
 case 6:
 /* rule 6 can match eol */
 YY_RULE_SETUP
-#line 121 "gocompiler.l"
+#line 122 "gocompiler.l"
 { curline++; curcol = 1; }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 122 "gocompiler.l"
-{ ; }
-	YY_BREAK
-case YY_STATE_EOF(MULTI_LINE_COMMENT):
 #line 123 "gocompiler.l"
-{ printf("Line %d, column %d: unterminated comment\n", ml_comment_start_line, ml_comment_start_col); BEGIN(INITIAL); add_semicolon = 0; }
+{ ; }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
 #line 127 "gocompiler.l"
 { BEGIN(STRING); add_semicolon = 1; add_str_buffer(yytext, yyleng); str_error = 0; str_start_line = curline; str_start_col = curcol - yyleng; }
 	YY_BREAK
+case YY_STATE_EOF(STRING):
+#line 128 "gocompiler.l"
+{ printf("Line %d, column %d: unterminated string literal\n", str_start_line, str_start_col);  reset_str_buffer(); add_semicolon = 0; BEGIN(INITIAL); }
+	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 128 "gocompiler.l"
+#line 129 "gocompiler.l"
 { add_str_buffer(yytext, yyleng); }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 129 "gocompiler.l"
-{ printf("Line %d, column %d: invalid escape sequence (%s)\n", curline, curcol - yyleng, yytext); str_error = 1; str_buffer_index += yyleng; /*BEGIN(INITIAL); reset_str_buffer();*/ }
+#line 130 "gocompiler.l"
+{ printf("Line %d, column %d: invalid escape sequence (%s)\n", str_start_line, curcol - yyleng, yytext); str_error = 1; str_buffer_index += yyleng; /*BEGIN(INITIAL); reset_str_buffer();*/ }
 	YY_BREAK
 case 11:
 /* rule 11 can match eol */
 YY_RULE_SETUP
-#line 130 "gocompiler.l"
+#line 131 "gocompiler.l"
 { printf("Line %d, column %d: unterminated string literal\n", str_start_line, str_start_col); BEGIN(INITIAL); curline++; curcol = 1; reset_str_buffer(); add_semicolon = 0; }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 131 "gocompiler.l"
+#line 132 "gocompiler.l"
 { 
                                         add_str_buffer(yytext, yyleng); 
                                         str_buffer[str_buffer_index] = '\0';
                                         
                                         if(!str_error){
-                                            printf("STRLIT(%s)\n", str_buffer); 
+                                            if(verbose) printf("STRLIT(%s)\n", str_buffer); 
                                             add_semicolon = 1; 
                                         }
                                         else{
@@ -1029,266 +1026,257 @@ YY_RULE_SETUP
                                         BEGIN(INITIAL); 
                                     }
 	YY_BREAK
-case YY_STATE_EOF(STRING):
-#line 147 "gocompiler.l"
-{ printf("Line %d, column %d: unterminated string literal\n", str_start_line, str_start_col);  reset_str_buffer(); add_semicolon = 0; BEGIN(INITIAL); }
-	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 151 "gocompiler.l"
-{ printf("SEMICOLON\n"); add_semicolon = 0; }
+#line 150 "gocompiler.l"
+{ if(verbose) printf("SEMICOLON\n"); add_semicolon = 0; }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 152 "gocompiler.l"
-{ printf("COMMA\n"); add_semicolon = 0; }
+#line 151 "gocompiler.l"
+{ if(verbose) printf("COMMA\n"); add_semicolon = 0; }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 153 "gocompiler.l"
-{ printf("ASSIGN\n"); add_semicolon = 0; }
+#line 152 "gocompiler.l"
+{ if(verbose) printf("ASSIGN\n"); add_semicolon = 0; }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 154 "gocompiler.l"
-{ printf("STAR\n"); add_semicolon = 0; }
+#line 153 "gocompiler.l"
+{ if(verbose) printf("STAR\n"); add_semicolon = 0; }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 155 "gocompiler.l"
-{ printf("DIV\n"); add_semicolon = 0; }
+#line 154 "gocompiler.l"
+{ if(verbose) printf("DIV\n"); add_semicolon = 0; }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 156 "gocompiler.l"
-{ printf("MINUS\n"); add_semicolon = 0; }
+#line 155 "gocompiler.l"
+{ if(verbose) printf("MINUS\n"); add_semicolon = 0; }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 157 "gocompiler.l"
-{ printf("PLUS\n"); add_semicolon = 0; }
+#line 156 "gocompiler.l"
+{ if(verbose) printf("PLUS\n"); add_semicolon = 0; }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 158 "gocompiler.l"
-{ printf("EQ\n"); add_semicolon = 0; }
+#line 157 "gocompiler.l"
+{ if(verbose) printf("EQ\n"); add_semicolon = 0; }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 159 "gocompiler.l"
-{ printf("GE\n"); add_semicolon = 0; }
+#line 158 "gocompiler.l"
+{ if(verbose) printf("GE\n"); add_semicolon = 0; }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 160 "gocompiler.l"
-{ printf("GT\n"); add_semicolon = 0; }
+#line 159 "gocompiler.l"
+{ if(verbose) printf("GT\n"); add_semicolon = 0; }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 161 "gocompiler.l"
-{ printf("LBRACE\n"); add_semicolon = 0; }
+#line 160 "gocompiler.l"
+{ if(verbose) printf("LBRACE\n"); add_semicolon = 0; }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 162 "gocompiler.l"
-{ printf("LE\n"); add_semicolon = 0; }
+#line 161 "gocompiler.l"
+{ if(verbose) printf("LE\n"); add_semicolon = 0; }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 163 "gocompiler.l"
-{ printf("LPAR\n"); add_semicolon = 0; }
+#line 162 "gocompiler.l"
+{ if(verbose) printf("LPAR\n"); add_semicolon = 0; }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 164 "gocompiler.l"
-{ printf("LSQ\n"); add_semicolon = 0; }
+#line 163 "gocompiler.l"
+{ if(verbose) printf("LSQ\n"); add_semicolon = 0; }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 165 "gocompiler.l"
-{ printf("LT\n"); add_semicolon = 0; }
+#line 164 "gocompiler.l"
+{ if(verbose) printf("LT\n"); add_semicolon = 0; }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 166 "gocompiler.l"
-{ printf("MOD\n"); add_semicolon = 0; }
+#line 165 "gocompiler.l"
+{ if(verbose) printf("MOD\n"); add_semicolon = 0; }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 167 "gocompiler.l"
-{ printf("NE\n"); add_semicolon = 0; }
+#line 166 "gocompiler.l"
+{ if(verbose) printf("NE\n"); add_semicolon = 0; }
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 168 "gocompiler.l"
-{ printf("NOT\n"); add_semicolon = 0; }
+#line 167 "gocompiler.l"
+{ if(verbose) printf("NOT\n"); add_semicolon = 0; }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 169 "gocompiler.l"
-{ printf("AND\n"); add_semicolon = 0; }
+#line 168 "gocompiler.l"
+{ if(verbose) printf("AND\n"); add_semicolon = 0; }
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 170 "gocompiler.l"
-{ printf("OR\n"); add_semicolon = 0; }
+#line 169 "gocompiler.l"
+{ if(verbose) printf("OR\n"); add_semicolon = 0; }
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 171 "gocompiler.l"
-{ printf("PACKAGE\n"); add_semicolon = 0; }
+#line 170 "gocompiler.l"
+{ if(verbose) printf("PACKAGE\n"); add_semicolon = 0; }
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 172 "gocompiler.l"
-{ printf("ELSE\n"); add_semicolon = 0; }
+#line 171 "gocompiler.l"
+{ if(verbose) printf("ELSE\n"); add_semicolon = 0; }
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 173 "gocompiler.l"
-{ printf("FOR\n"); add_semicolon = 0; }
+#line 172 "gocompiler.l"
+{ if(verbose) printf("FOR\n"); add_semicolon = 0; }
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 174 "gocompiler.l"
-{ printf("IF\n"); add_semicolon = 0; }
+#line 173 "gocompiler.l"
+{ if(verbose) printf("IF\n"); add_semicolon = 0; }
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 175 "gocompiler.l"
-{ printf("VAR\n"); add_semicolon = 0; }
+#line 174 "gocompiler.l"
+{ if(verbose) printf("VAR\n"); add_semicolon = 0; }
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 176 "gocompiler.l"
-{ printf("INT\n"); add_semicolon = 0; }
+#line 175 "gocompiler.l"
+{ if(verbose) printf("INT\n"); add_semicolon = 0; }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 177 "gocompiler.l"
-{ printf("FLOAT32\n"); add_semicolon = 0; }
+#line 176 "gocompiler.l"
+{ if(verbose) printf("FLOAT32\n"); add_semicolon = 0; }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 178 "gocompiler.l"
-{ printf("BOOL\n"); add_semicolon = 0; }
+#line 177 "gocompiler.l"
+{ if(verbose) printf("BOOL\n"); add_semicolon = 0; }
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 179 "gocompiler.l"
-{ printf("STRING\n"); add_semicolon = 0; }
+#line 178 "gocompiler.l"
+{ if(verbose) printf("STRING\n"); add_semicolon = 0; }
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 180 "gocompiler.l"
-{ printf("PRINT\n"); add_semicolon = 0; }
+#line 179 "gocompiler.l"
+{ if(verbose) printf("PRINT\n"); add_semicolon = 0; }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 181 "gocompiler.l"
-{ printf("PARSEINT\n"); add_semicolon = 0; }
+#line 180 "gocompiler.l"
+{ if(verbose) printf("PARSEINT\n"); add_semicolon = 0; }
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 182 "gocompiler.l"
-{ printf("FUNC\n"); add_semicolon = 0; }
+#line 181 "gocompiler.l"
+{ if(verbose) printf("FUNC\n"); add_semicolon = 0; }
 	YY_BREAK
 case 45:
 YY_RULE_SETUP
-#line 183 "gocompiler.l"
-{ printf("CMDARGS\n"); add_semicolon = 0; }
+#line 182 "gocompiler.l"
+{ if(verbose) printf("CMDARGS\n"); add_semicolon = 0; }
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-#line 184 "gocompiler.l"
+#line 183 "gocompiler.l"
 { ; }
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
-#line 186 "gocompiler.l"
-{ printf("BLANKID\n"); add_semicolon = 0; }
+#line 185 "gocompiler.l"
+{ if(verbose) printf("BLANKID\n"); add_semicolon = 0; }
 	YY_BREAK
 case 48:
 YY_RULE_SETUP
-#line 187 "gocompiler.l"
-{ printf("RESERVED(%s)\n", yytext); add_semicolon = 0; }
+#line 186 "gocompiler.l"
+{ if(verbose) printf("RESERVED(%s)\n", yytext); add_semicolon = 0; }
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
-#line 189 "gocompiler.l"
-{ printf("RBRACE\n"); add_semicolon = 1; }
+#line 188 "gocompiler.l"
+{ if(verbose) printf("RBRACE\n"); add_semicolon = 1; }
 	YY_BREAK
 case 50:
 YY_RULE_SETUP
-#line 190 "gocompiler.l"
-{ printf("RPAR\n"); add_semicolon = 1; }
+#line 189 "gocompiler.l"
+{ if(verbose) printf("RPAR\n"); add_semicolon = 1; }
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
-#line 191 "gocompiler.l"
-{ printf("RSQ\n"); add_semicolon = 1; }
+#line 190 "gocompiler.l"
+{ if(verbose) printf("RSQ\n"); add_semicolon = 1; }
 	YY_BREAK
 case 52:
 YY_RULE_SETUP
-#line 192 "gocompiler.l"
-{ printf("RETURN\n"); add_semicolon = 1; }
+#line 191 "gocompiler.l"
+{ if(verbose) printf("RETURN\n"); add_semicolon = 1; }
 	YY_BREAK
 case 53:
 YY_RULE_SETUP
-#line 193 "gocompiler.l"
-{ printf("IDENTIFIER(%s)\n", yytext); add_semicolon = 1; }
+#line 192 "gocompiler.l"
+{ if(verbose) printf("IDENTIFIER(%s)\n", yytext); add_semicolon = 1; }
 	YY_BREAK
 case 54:
 YY_RULE_SETUP
-#line 196 "gocompiler.l"
-{ printf("NATURAL(%s)\n", yytext); add_semicolon = 1; }
+#line 195 "gocompiler.l"
+{ if(verbose) printf("NATURAL(%s)\n", yytext); add_semicolon = 1; }
 	YY_BREAK
 case 55:
 YY_RULE_SETUP
-#line 197 "gocompiler.l"
-{ printf("Line %d, column %d: invalid octal constant (%s)\n", curline, curcol - yyleng, yytext); add_semicolon = 0; }
+#line 196 "gocompiler.l"
+{ if(verbose) printf("Line %d, column %d: invalid octal constant (%s)\n", curline, curcol - yyleng, yytext); add_semicolon = 0; }
 	YY_BREAK
 case 56:
 YY_RULE_SETUP
-#line 198 "gocompiler.l"
-{ printf("NATURAL(%s)\n", yytext); add_semicolon = 1; }
+#line 197 "gocompiler.l"
+{ if(verbose) printf("NATURAL(%s)\n", yytext); add_semicolon = 1; }
 	YY_BREAK
 case 57:
 YY_RULE_SETUP
-#line 199 "gocompiler.l"
-{ printf("NATURAL(%s)\n", yytext); add_semicolon = 1; }
+#line 198 "gocompiler.l"
+{ if(verbose) printf("NATURAL(%s)\n", yytext); add_semicolon = 1; }
 	YY_BREAK
 case 58:
 YY_RULE_SETUP
-#line 201 "gocompiler.l"
-{ printf("DECIMAL(%s)\n", yytext); add_semicolon = 1; }
+#line 200 "gocompiler.l"
+{ if(verbose) printf("DECIMAL(%s)\n", yytext); add_semicolon = 1; }
 	YY_BREAK
 case 59:
 /* rule 59 can match eol */
 YY_RULE_SETUP
-#line 202 "gocompiler.l"
-{ curline++; curcol = 1; if(add_semicolon) printf("SEMICOLON\n"); add_semicolon = 0; }
+#line 201 "gocompiler.l"
+{ curline++; curcol = 1; if(add_semicolon && verbose) printf("SEMICOLON\n"); add_semicolon = 0; }
+	YY_BREAK
+case YY_STATE_EOF(INITIAL):
+#line 203 "gocompiler.l"
+{ if(add_semicolon && verbose) printf("SEMICOLON\n"); add_semicolon = 0; return 0; }
 	YY_BREAK
 case 60:
 YY_RULE_SETUP
 #line 204 "gocompiler.l"
 { printf("Line %d, column %d: illegal character (%s)\n", curline, curcol - yyleng, yytext); }
 	YY_BREAK
-case YY_STATE_EOF(INITIAL):
-case YY_STATE_EOF(SINGLE_LINE_COMMENT):
-#line 205 "gocompiler.l"
-{ if(add_semicolon) printf("SEMICOLON\n"); add_semicolon = 0; return 0; }
-	YY_BREAK
 case 61:
 YY_RULE_SETUP
-#line 207 "gocompiler.l"
+#line 206 "gocompiler.l"
 ECHO;
 	YY_BREAK
-<<<<<<< HEAD
-#line 1275 "lex.yy.c"
-=======
-#line 1277 "lex.yy.c"
->>>>>>> 9ce9b1846e1e297bd3378106813e149874b40cf0
+#line 1279 "lex.yy.c"
 
 	case YY_END_OF_BUFFER:
 		{
@@ -1473,7 +1461,7 @@ static int yy_get_next_buffer (void)
 
 	else
 		{
-			yy_size_t num_to_read =
+			int num_to_read =
 			YY_CURRENT_BUFFER_LVALUE->yy_buf_size - number_to_move - 1;
 
 		while ( num_to_read <= 0 )
@@ -1487,7 +1475,7 @@ static int yy_get_next_buffer (void)
 
 			if ( b->yy_is_our_buffer )
 				{
-				yy_size_t new_size = b->yy_buf_size * 2;
+				int new_size = b->yy_buf_size * 2;
 
 				if ( new_size <= 0 )
 					b->yy_buf_size += b->yy_buf_size / 8;
@@ -1545,7 +1533,7 @@ static int yy_get_next_buffer (void)
 
 	if (((yy_n_chars) + number_to_move) > YY_CURRENT_BUFFER_LVALUE->yy_buf_size) {
 		/* Extend the array by 50%, plus the number we really need. */
-		yy_size_t new_size = (yy_n_chars) + number_to_move + ((yy_n_chars) >> 1);
+		int new_size = (yy_n_chars) + number_to_move + ((yy_n_chars) >> 1);
 		YY_CURRENT_BUFFER_LVALUE->yy_ch_buf = (char *) yyrealloc(
 			(void *) YY_CURRENT_BUFFER_LVALUE->yy_ch_buf, (yy_size_t) new_size  );
 		if ( ! YY_CURRENT_BUFFER_LVALUE->yy_ch_buf )
@@ -1634,7 +1622,7 @@ static int yy_get_next_buffer (void)
 	if ( yy_cp < YY_CURRENT_BUFFER_LVALUE->yy_ch_buf + 2 )
 		{ /* need to shift things up to make room */
 		/* +2 for EOB chars. */
-		yy_size_t number_to_move = (yy_n_chars) + 2;
+		int number_to_move = (yy_n_chars) + 2;
 		char *dest = &YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[
 					YY_CURRENT_BUFFER_LVALUE->yy_buf_size + 2];
 		char *source =
@@ -1685,7 +1673,7 @@ static int yy_get_next_buffer (void)
 
 		else
 			{ /* need more input */
-			yy_size_t offset = (yy_c_buf_p) - (yytext_ptr);
+			int offset = (int) ((yy_c_buf_p) - (yytext_ptr));
 			++(yy_c_buf_p);
 
 			switch ( yy_get_next_buffer(  ) )
@@ -2054,12 +2042,12 @@ YY_BUFFER_STATE yy_scan_string (const char * yystr )
  * 
  * @return the newly allocated buffer state object.
  */
-YY_BUFFER_STATE yy_scan_bytes  (const char * yybytes, yy_size_t  _yybytes_len )
+YY_BUFFER_STATE yy_scan_bytes  (const char * yybytes, int  _yybytes_len )
 {
 	YY_BUFFER_STATE b;
 	char *buf;
 	yy_size_t n;
-	yy_size_t i;
+	int i;
     
 	/* Get memory for full buffer, including space for trailing EOB's. */
 	n = (yy_size_t) (_yybytes_len + 2);
@@ -2101,7 +2089,7 @@ static void yynoreturn yy_fatal_error (const char* msg )
 	do \
 		{ \
 		/* Undo effects of setting up yytext. */ \
-        yy_size_t yyless_macro_arg = (n); \
+        int yyless_macro_arg = (n); \
         YY_LESS_LINENO(yyless_macro_arg);\
 		yytext[yyleng] = (yy_hold_char); \
 		(yy_c_buf_p) = yytext + yyless_macro_arg; \
@@ -2141,7 +2129,7 @@ FILE *yyget_out  (void)
 /** Get the length of the current token.
  * 
  */
-yy_size_t yyget_leng  (void)
+int yyget_leng  (void)
 {
         return yyleng;
 }
@@ -2291,11 +2279,18 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 207 "gocompiler.l"
+#line 206 "gocompiler.l"
 
 
 extern int yylex();
-int main() {
+int main(int argc, char **argv) {
+    if(argc > 1) {
+        if(strcmp(argv[1], "-l") == 0) {
+            verbose = 1;
+        }
+    }
+
+
     yylex();    /* run the lexical analysis automaton */
     return 0;
 }
