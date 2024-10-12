@@ -85,13 +85,13 @@ DECLIT                              [0-9]
 
 OCTALPREFIX                         "0"
 OCTAL                               {OCTALPREFIX}[0-7]+
-INVALID_OCTAL                       {OCTALPREFIX}[0-7]*[89][0-7]*
+INVALID_OCTAL                       {OCTALPREFIX}[0-9]+
 
 HEXPREFIX                            "0x"|"0X"
 HEX                                  {HEXPREFIX}[0-9a-fA-F]+
 
 IDENTIFIER                          {LETTER}({DECLIT}|{LETTER})*
-NATURAL                             ({DECLIT}+)|{OCTAL}|{HEX}
+NATURAL                             {DECLIT}+
 
 EXPONENT                            [eE][+-]?{DECLIT}+
 DECIMAL                             ({DECLIT}+"."{DECLIT}*{EXPONENT}?)|("."{DECLIT}+{EXPONENT}?)|({DECLIT}+{EXPONENT})
@@ -146,7 +146,7 @@ QUOTE                               \"
 <STRING>{NEWLINE}                   { printf("Line %d, column %d: unterminated string literal\n", curline, curcol - str_buffer_index - yyleng); BEGIN(INITIAL); curline++; curcol = 1; reset_str_buffer(); add_semicolon = 0; }
 
 <STRING>.                           { add_str_buffer(yytext, yyleng); }
-<STRING><<EOF>>                     { printf("Line %d, column %d: unterminated string literal\n", curline, curcol - str_buffer_index); BEGIN(INITIAL); reset_str_buffer(); add_semicolon = 0; }
+<STRING><<EOF>>                     { printf("Line %d, column %d: unterminated string literal\n", curline, curcol - str_buffer_index); BEGIN(INITIAL); reset_str_buffer(); add_semicolon = 0; return 0; }
 
 
 
@@ -195,8 +195,11 @@ QUOTE                               \"
 {IDENTIFIER}                        { printf("IDENTIFIER(%s)\n", yytext); add_semicolon = 1; }
 
 
+{OCTAL}                             { printf("NATURAL(%s)\n", yytext); add_semicolon = 1; }
 {INVALID_OCTAL}                     { printf("Line %d, column %d: invalid octal constant (%s)\n", curline, curcol - yyleng, yytext); }
 {NATURAL}                           { printf("NATURAL(%s)\n", yytext); add_semicolon = 1; }
+{HEX}                               { printf("NATURAL(%s)\n", yytext); add_semicolon = 1; }
+
 {DECIMAL}                           { printf("DECIMAL(%s)\n", yytext); add_semicolon = 1; }
 {NEWLINE}                           { curline++; curcol = 1; if(add_semicolon) printf("SEMICOLON\n"); add_semicolon = 0; }
 
