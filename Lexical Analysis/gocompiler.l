@@ -1,4 +1,10 @@
 %{
+    /*
+        Authors:
+            Nuno Batista: uc2022216127
+            Miguel Castela: uc2022212972
+    */
+
     #include <ctype.h>
     #include <stdio.h>
     #include <string.h>
@@ -14,7 +20,7 @@
     int ml_comment_start_line = 0;
     int ml_comment_start_col = 0;
 
-    char str_buffer[1024];
+    char str_buffer[4096];
     int str_buffer_index = 0;
 
     int str_error = 0;
@@ -74,10 +80,8 @@ RESERVED                            "++"|"--"|"break"|"case"|"chan"|"const"|"con
 IGNORE                              " "|"\t"
 NEWLINE                             "\n"|"\r"|"\r\n"
 
-
 LETTER                              [a-z]|[A-Z]|"_"
 DECLIT                              [0-9]
-
 
 OCTALPREFIX                         "0"
 OCTAL                               {OCTALPREFIX}[0-7]+
@@ -87,7 +91,7 @@ HEXPREFIX                            "0x"|"0X"
 HEX                                  {HEXPREFIX}[0-9a-fA-F]+
 
 IDENTIFIER                          {LETTER}({DECLIT}|{LETTER})*
-NATURAL                             0|([1-9]{DECLIT}*)|{OCTAL}|{HEX}
+NATURAL                             ({DECLIT}+)|{OCTAL}|{HEX}
 
 EXPONENT                            [eE][+-]?{DECLIT}+
 DECIMAL                             ({DECLIT}+"."{DECLIT}*{EXPONENT}?)|("."{DECLIT}+{EXPONENT}?)|({DECLIT}+{EXPONENT})
@@ -107,6 +111,7 @@ QUOTE                               \"
 "//"                                { BEGIN(SINGLE_LINE_COMMENT); }
 <SINGLE_LINE_COMMENT>{NEWLINE}      { BEGIN(INITIAL); if(add_semicolon) printf("SEMICOLON\n"); add_semicolon = 0; curline++; curcol = 1; }
 <SINGLE_LINE_COMMENT>.              { ; }
+<SINGLE_LINE_COMMENT><<EOF>>        { BEGIN(INITIAL); if(add_semicolon) printf("SEMICOLON\n"); add_semicolon = 0; return 0; }
 
 
 
@@ -114,7 +119,7 @@ QUOTE                               \"
 <MULTI_LINE_COMMENT>"*/"            { BEGIN(INITIAL); }
 <MULTI_LINE_COMMENT>.               { ; }
 <MULTI_LINE_COMMENT>{NEWLINE}       { curline++; curcol = 1; }
-<MULTI_LINE_COMMENT><<EOF>>         { printf("Line %d, column %d: unterminated comment\n", ml_comment_start_line, ml_comment_start_col); add_semicolon = 0; BEGIN(INITIAL); }
+<MULTI_LINE_COMMENT><<EOF>>         { printf("Line %d, column %d: unterminated comment\n", ml_comment_start_line, ml_comment_start_col); add_semicolon = 0; BEGIN(INITIAL); return 0; }
 
 
 
@@ -190,11 +195,11 @@ QUOTE                               \"
 {IDENTIFIER}                        { printf("IDENTIFIER(%s)\n", yytext); add_semicolon = 1; }
 
 
+{INVALID_OCTAL}                     { printf("Line %d, column %d: invalid octal constant (%s)\n", curline, curcol - yyleng, yytext); }
 {NATURAL}                           { printf("NATURAL(%s)\n", yytext); add_semicolon = 1; }
 {DECIMAL}                           { printf("DECIMAL(%s)\n", yytext); add_semicolon = 1; }
 {NEWLINE}                           { curline++; curcol = 1; if(add_semicolon) printf("SEMICOLON\n"); add_semicolon = 0; }
 
-{INVALID_OCTAL}                     { printf("Line %d, column %d: invalid octal constant (%s)\n", curline, curcol - yyleng, yytext); }
 .                                   { printf("Line %d, column %d: illegal character (%s)\n", curline, curcol - yyleng, yytext); }
 
 <<EOF>>                             { if(add_semicolon) printf("SEMICOLON\n"); return 0; }
