@@ -207,12 +207,12 @@ QUOTE                               \"
 
 extern int yylex();
 int main(int argc, char **argv) {
+
     if(argc > 1) {
         if(strcmp(argv[1], "-l") == 0) {
             verbose = 1;
         }
     }
-
 
     yylex();    /* run the lexical analysis automaton */
     return 0;
