@@ -3,12 +3,16 @@
     #include <stdio.h>
     #include <string.h>
 
-    // #define YY_USER_ACTION \
-    //     curcol += yyleng; \
+    #define YY_USER_ACTION \
+        curcol += yyleng; \
+        
 
     int curline = 1; 
     int curcol = 1;
     int add_semicolon = 0; 
+
+    int ml_comment_start_line = 0;
+    int ml_comment_start_col = 0;
 
     char str_buffer[1024];
     int str_buffer_index = 0;
@@ -77,7 +81,7 @@ DECLIT                              [0-9]
 
 OCTALPREFIX                         "0"
 OCTAL                               {OCTALPREFIX}[0-7]+
-INVALID_OCTAL                       {OCTALPREFIX}[0-7]*[^0-7][0-7]*
+INVALID_OCTAL                       {OCTALPREFIX}[0-7]*[89][0-7]*
 
 HEXPREFIX                            "0x"|"0X"
 HEX                                  {HEXPREFIX}[0-9a-fA-F]+
@@ -88,8 +92,8 @@ NATURAL                             0|([1-9]{DECLIT}*)|{OCTAL}|{HEX}
 EXPONENT                            [eE][+-]?{DECLIT}+
 DECIMAL                             ({DECLIT}+"."{DECLIT}*{EXPONENT}?)|("."{DECLIT}+{EXPONENT}?)|({DECLIT}+{EXPONENT})
 
-STRLIT                              ([^\"\\n])
-INVALID_ESC                         \\[^fnrt\\"]
+ESCAPE_SEQ			                \\\\|\\n|\\f|\\r|\\t|\\\"
+
 QUOTE                               "\""
 
 %X SINGLE_LINE_COMMENT
@@ -98,20 +102,25 @@ QUOTE                               "\""
 
 %%
 
-"//"                                { BEGIN(SINGLE_LINE_COMMENT); curcol += yyleng; }
+
+
+"//"                                { BEGIN(SINGLE_LINE_COMMENT); }
 <SINGLE_LINE_COMMENT>{NEWLINE}      { BEGIN(INITIAL); if(add_semicolon) printf("SEMICOLON\n"); add_semicolon = 0; curline++; curcol = 1; }
 <SINGLE_LINE_COMMENT>.              { ; }
 
-"/*"                                { BEGIN(MULTI_LINE_COMMENT); curcol += yyleng; }
-<MULTI_LINE_COMMENT>"*/"            { BEGIN(INITIAL); if(add_semicolon) printf("SEMICOLON\n"); add_semicolon = 0; curcol += yyleng; }
-<MULTI_LINE_COMMENT>.               { curcol += yyleng; }
-<MULTI_LINE_COMMENT>{NEWLINE}       { curline++; curcol = 1; }
-<MULTI_LINE_COMMENT><<EOF>>         { printf("Line %d, column %d: unterminated comment\n", curline, curcol); BEGIN(INITIAL); }
 
-{QUOTE}                             { BEGIN(STRING); add_semicolon = 1; add_str_buffer(yytext, yyleng); curcol += yyleng; str_error = 0; }
+
+"/*"                                { BEGIN(MULTI_LINE_COMMENT); ml_comment_start_line = curline; ml_comment_start_col = curcol - yyleng; }
+<MULTI_LINE_COMMENT>"*/"            { BEGIN(INITIAL); if(add_semicolon) printf("SEMICOLON\n"); add_semicolon = 0; }
+<MULTI_LINE_COMMENT>.               { ; }
+<MULTI_LINE_COMMENT>{NEWLINE}       { curline++; curcol = 1; }
+<MULTI_LINE_COMMENT><<EOF>>         { printf("Line %d, column %d: unterminated comment\n", ml_comment_start_line, ml_comment_start_col); BEGIN(INITIAL); }
+
+
+
+{QUOTE}                             { BEGIN(STRING); add_semicolon = 1; add_str_buffer(yytext, yyleng); str_error = 0; }
 <STRING>{QUOTE}                     { 
                                         add_str_buffer(yytext, yyleng); 
-                                        curcol += yyleng; 
                                         str_buffer[str_buffer_index] = '\0';
                                         
                                         if(!str_error){
@@ -125,10 +134,15 @@ QUOTE                               "\""
                                         reset_str_buffer();
                                         BEGIN(INITIAL); 
                                     }
+
+<STRING>.                           { add_str_buffer(yytext, yyleng); }
+<STRING>{ESCAPE_SEQ}                { add_str_buffer(yytext, yyleng); }
+
+<STRING>(\\.)                       { printf("Line %d, column %d: invalid escape sequence (%s)\n", curline, curcol - yyleng, yytext); str_error = 1; /*BEGIN(INITIAL); reset_str_buffer();*/ }
 <STRING><<EOF>>                     { printf("Line %d, column %d: unterminated string literal\n", curline, curcol - str_buffer_index); BEGIN(INITIAL); reset_str_buffer(); }
-<STRING>{NEWLINE}                   { printf("Line %d, column %d: unterminated string literal\n", curline, curcol - str_buffer_index); BEGIN(INITIAL); curline++; curcol = 1; reset_str_buffer(); }
-<STRING>{INVALID_ESC}               { printf("Line %d, column %d: invalid escape sequence (%s)\n", curline, curcol, yytext); str_error = 1; /*BEGIN(INITIAL); reset_str_buffer();*/ }
-<STRING>{STRLIT}                    { add_str_buffer(yytext, yyleng); curcol += yyleng; }
+<STRING>{NEWLINE}                   { printf("Line %d, column %d: unterminated string literal\n", curline, curcol - str_buffer_index - yyleng); BEGIN(INITIAL); curline++; curcol = 1; reset_str_buffer(); }
+
+
 
 {SEMICOLON}                         { printf("SEMICOLON\n"); add_semicolon = 0; }
 {COMMA}                             { printf("COMMA\n"); add_semicolon = 0; }
@@ -163,7 +177,7 @@ QUOTE                               "\""
 {PARSEINT}                          { printf("PARSEINT\n"); add_semicolon = 0; }
 {FUNC}                              { printf("FUNC\n"); add_semicolon = 0; }
 {CMDARGS}                           { printf("CMDARGS\n"); add_semicolon = 0; }
-{IGNORE}                            { curcol += yyleng; }
+{IGNORE}                            { ; }
 
 {BLANKID}                           { printf("BLANKID\n"); add_semicolon = 0; }
 {RESERVED}                          { printf("RESERVED(%s)\n", yytext); add_semicolon = 0; }
@@ -174,13 +188,13 @@ QUOTE                               "\""
 {RETURN}                            { printf("RETURN\n"); add_semicolon = 1; }
 {IDENTIFIER}                        { printf("IDENTIFIER(%s)\n", yytext); add_semicolon = 1; }
 
-{INVALID_OCTAL}                     { printf("Line %d, column %d: invalid octal constant (%s)\n", curline, curcol, yytext); }
+
 {NATURAL}                           { printf("NATURAL(%s)\n", yytext); add_semicolon = 1; }
 {DECIMAL}                           { printf("DECIMAL(%s)\n", yytext); add_semicolon = 1; }
 {NEWLINE}                           { curline++; curcol = 1; if(add_semicolon) printf("SEMICOLON\n"); add_semicolon = 0; }
 
-.                                   { printf("Line %d, column %d: illegal character (%s)\n", curline, curcol, yytext); }
-
+{INVALID_OCTAL}                     { printf("Line %d, column %d: invalid octal constant (%s)\n", curline, curcol - yyleng, yytext); }
+.                                   { printf("Line %d, column %d: illegal character (%s)\n", curline, curcol - yyleng, yytext); }
 
 
 %%
