@@ -119,7 +119,7 @@ QUOTE                               \"
 <MULTI_LINE_COMMENT>"*/"            { BEGIN(INITIAL); }
 <MULTI_LINE_COMMENT>.               { ; }
 <MULTI_LINE_COMMENT>{NEWLINE}       { curline++; curcol = 1; }
-<MULTI_LINE_COMMENT><<EOF>>         { printf("Line %d, column %d: unterminated comment\n", ml_comment_start_line, ml_comment_start_col); add_semicolon = 0; BEGIN(INITIAL); return 0; }
+<MULTI_LINE_COMMENT><<EOF>>         { printf("Line %d, column %d: unterminated comment\n", ml_comment_start_line, ml_comment_start_col); add_semicolon = 0; return 0; }
 
 
 
