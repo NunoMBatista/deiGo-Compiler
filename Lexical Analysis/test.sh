@@ -9,7 +9,7 @@
 
 usage() {
   echo -n "Usage:
-  $0 -b ../gocompiler -m 1
+  $0 -b gocompiler -m 1
   $0 -b gocompiler -m 2
   $0 -b gocompiler -f ./Comp2019
   $0 -b gocompiler -f ./Comp2019 -m 3
@@ -35,7 +35,7 @@ fi
 # por defeito e a pasta onde o script se encontra
 folder="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 # path para o executavel 'gocompiler'
-bin="../gocompiler"
+bin="gocompiler"
 # meta a testar, testa todas por omissao
 meta=""
 

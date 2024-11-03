@@ -10,12 +10,15 @@
     #include <string.h>
 
     #define YY_USER_ACTION \
+        syn_col = curcol; \
         curcol += yyleng; \
+        
         
     int verbose = 0;
 
     int curline = 1; 
     int curcol = 1;
+    int syn_col = 1; 
     int add_semicolon = 0; 
 
     int ml_comment_start_line = 0;
