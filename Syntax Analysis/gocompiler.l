@@ -10,10 +10,19 @@
     #include "y.tab.h"
     #include "ast.h"
 
+    //#define DEBUG
+
+    #ifdef DEBUG
+        extern int yydebug;
+    #endif
+
     // This macro is executed before each token is returned
     #define YY_USER_ACTION \
         syn_col = lex_col; \
+        syn_line = lex_line; \
+        syn_col = lex_col; \
         lex_col += yyleng; \
+        
     
     #define PASS_TOKEN() yylval.lexeme = strdup(yytext);
         
@@ -46,6 +55,9 @@
 
     // Flag to indicate if a string literal has an error
     int str_error = 0;
+
+    // Flag to indicate if the lexer should return EOF
+    int return_eof = 0;
 
     extern struct node *program;
 
@@ -134,13 +146,13 @@ QUOTE                               \"
 
 "//"                                { BEGIN(SINGLE_LINE_COMMENT); }
 <SINGLE_LINE_COMMENT><<EOF>>        { BEGIN(INITIAL); printf("Line %d, column %d: unterminated comment\n", lex_line, lex_col - yyleng); add_semicolon = 0; }
-<SINGLE_LINE_COMMENT>{NEWLINE}      { BEGIN(INITIAL); if(add_semicolon && lex_only) printf("SEMICOLON\n"); add_semicolon = 0; lex_line++; lex_col = 1; }
+<SINGLE_LINE_COMMENT>{NEWLINE}      { BEGIN(INITIAL); lex_line++; /*syn_line++; syn_col = 1;*/  lex_col = 1; if(add_semicolon) { add_semicolon = 0; if(lex_only) printf("SEMICOLON\n"); else return SEMICOLON; } }
 <SINGLE_LINE_COMMENT>.              { ; }
 
 "/*"                                { BEGIN(MULTI_LINE_COMMENT); ml_comment_start_line = lex_line; ml_comment_start_col = lex_col - yyleng; }
 <MULTI_LINE_COMMENT><<EOF>>         { printf("Line %d, column %d: unterminated comment\n", ml_comment_start_line, ml_comment_start_col); BEGIN(INITIAL); add_semicolon = 0; }
 <MULTI_LINE_COMMENT>"*/"            { BEGIN(INITIAL); }
-<MULTI_LINE_COMMENT>{NEWLINE}       { lex_line++; lex_col = 1; }
+<MULTI_LINE_COMMENT>{NEWLINE}       { lex_line++; /*syn_line++; syn_col = 1;*/ lex_col = 1; }
 <MULTI_LINE_COMMENT>.               { ; }
 
 
@@ -149,7 +161,7 @@ QUOTE                               \"
 <STRING_LITERAL><<EOF>>             { printf("Line %d, column %d: unterminated string literal\n", str_start_line, str_start_col);  reset_str_buffer(); add_semicolon = 0; BEGIN(INITIAL); }
 <STRING_LITERAL>{STRLIT}            { add_str_buffer(yytext, yyleng); }
 <STRING_LITERAL>\\(.?)              { printf("Line %d, column %d: invalid escape sequence (%s)\n", str_start_line, lex_col - yyleng, yytext); str_error = 1; str_buffer_index += yyleng; /*BEGIN(INITIAL); reset_str_buffer();*/ }
-<STRING_LITERAL>{NEWLINE}           { printf("Line %d, column %d: unterminated string literal\n", str_start_line, str_start_col); BEGIN(INITIAL); lex_line++; lex_col = 1; reset_str_buffer(); add_semicolon = 0; }
+<STRING_LITERAL>{NEWLINE}           { printf("Line %d, column %d: unterminated string literal\n", str_start_line, str_start_col); BEGIN(INITIAL); lex_line++; syn_line++; syn_col = 1; lex_col = 1; reset_str_buffer(); add_semicolon = 0; }
 <STRING_LITERAL>{QUOTE}             { 
                                         add_str_buffer(yytext, yyleng); 
                                         str_buffer[str_buffer_index] = '\0';
@@ -159,7 +171,12 @@ QUOTE                               \"
                                                 printf("STRLIT(%s)\n", str_buffer); 
                                             }
                                             else{
-                                                PASS_TOKEN();
+                                                // Store the string literal in the lexeme field
+                                                yylval.lexeme = strdup(str_buffer);
+
+                                                // Reset and change state before returning token
+                                                reset_str_buffer();
+                                                BEGIN(INITIAL); 
                                                 return STRLIT;
                                             }  
                                             add_semicolon = 1; 
@@ -225,29 +242,76 @@ QUOTE                               \"
 
 {DECIMAL}                           { if(lex_only) printf("DECIMAL(%s)\n", yytext);     add_semicolon = 1;          if(!lex_only) { PASS_TOKEN(); return DECIMAL; } }
 
-{NEWLINE}                           { lex_line++; lex_col = 1; if(add_semicolon && lex_only) printf("SEMICOLON\n"); if(add_semicolon && !lex_only) { return SEMICOLON; } add_semicolon = 0; }
+{NEWLINE}                           { 
+                                        lex_line++; /*syn_line++; syn_col = 1;*/  lex_col = 1; 
 
-<<EOF>>                             { if(add_semicolon && lex_only) printf("SEMICOLON\n"); if(add_semicolon && !lex_only) { return SEMICOLON; } add_semicolon = 0; return 0; }
+                                        if(add_semicolon) { 
+                                            add_semicolon = 0; 
+                                            if(lex_only == 1) {
+                                                printf("SEMICOLON\n");
+                                            }
+                                            if(lex_only == 0) {
+                                                return SEMICOLON; 
+                                            } 
+                                        }
+                                    }
+
+<<EOF>>                             { 
+                                        YY_USER_ACTION;
+                                        lex_col--;
+
+                                        if(return_eof) {
+                                            return 0;
+                                        }
+
+                                        if(add_semicolon) {
+                                            if(lex_only == 1){
+                                                printf("SEMICOLON\n"); 
+                                            }
+                                            if(lex_only == 0) {
+                                                return_eof = 1;
+                                                return SEMICOLON;
+                                            } 
+                                            
+                                            add_semicolon = 0; 
+                                        };      
+                                        return_eof = 1;
+                                    }
+
 .                                   { printf("Line %d, column %d: illegal character (%s)\n", lex_line, lex_col - yyleng, yytext); }
 
 %%
 
 void yyerror(char *error) {
     errors++;
-    printf("TEMP MESSAGE LEBRON JAMES Found %s '%s' (%d,%d)\n", error, yytext, syn_line, syn_col);
+    /* printf("Found %s '%s' (%d,%d)\n", error, yytext, syn_line, syn_col); */
+    if((yylval.lexeme != NULL) && (yylval.lexeme[0] == '"')){
+        printf("Line %d, column %d: %s: %s\n", str_start_line, str_start_col, error, yylval.lexeme);
+        yylval.lexeme = NULL;
+        reset_str_buffer();
+    }
+    else {
+        printf("Line %d, column %d: %s: %s\n", syn_line, syn_col, error, yytext);
+    }
 }
 
 extern int yylex();
 int main(int argc, char **argv) {
-    yyparse();
+    #ifdef DEBUG
+        yydebug = 1;
+    #endif
 
+    yyparse();
     if(argc > 1) {
         if(strcmp(argv[1], "-l") == 0) {
             lex_only = 1;
+            yylex();    /* run the lexical analysis automaton */
+        }
+        if(strcmp(argv[1], "-t") == 0) {
+            // PRINT AST
         }
     }
 
-    yylex();    /* run the lexical analysis automaton */
     return 0;
 }
 int yywrap() {  /* called on EOF, return 1 to terminate */
