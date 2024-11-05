@@ -108,40 +108,47 @@ VarDecl             :   VAR VarSpec
                         }
                     ;   
 
-VarSpec             :   IDENTIFIER Type
+VarSpec             :   IDENTIFIER StarCommaId Type
                         {
                             $$ = new_node(AUX, NULL);
-
                             struct node *new_decl = new_node(VarDecl, NULL);
-                            add_child(new_decl, $2);
+                            add_child(new_decl, $3);
                             add_child(new_decl, new_node(Identifier, $1));
                             add_child($$, new_decl);
+                            add_child($$, $2);
 
-                            //$$ = new_node(VarDecl, NULL);
-                            //add_child($$, $2);
-                            //add_child($$, new_node(Identifier, $1));
-                        }
-                    |   IDENTIFIER COMMA VarSpec                                
-                        {
-                            $$ = $3;
-                            struct node *new_decl = new_node(VarDecl, NULL);
-                            add_child(new_decl, new_node(Identifier, $1));
-                            add_child($$, new_decl);
-
-                            // Get the type of the last VarDecl
-                            struct node *type = $3->children->next->node->children->next->node;
-                            struct node *type_copy = new_node(type->category, NULL);
-                            add_child(new_decl, type_copy);
                             
+                            enum category type = $3->category;
+                            // Pass down the type to the extra variable declarations
+                            if($2 != NULL){
+                                // First extra variable declaration ($2 is the AUX node)
+                                struct node_list *cur_var_decl = $2->children->next;
+                                while(cur_var_decl != NULL){
+                                    add_child(cur_var_decl->node, new_node(type, NULL));                                    
+                                    cur_var_decl = cur_var_decl->next;
 
-                            //$$ = new_node(VarDecl, NULL);
-                            //add_child($$, new_node(Identifier, $1));
-                            ////add_child($$, type);
-
+                                    // TODO SWAP CHILD PLACES IN ORDER FOR THE TYPE TO BE THE FIRST CHILD
+                                    
+                            
+                                }
+                            }            
                         }
+
                     ;
 
-StarCommaId         :
+StarCommaId         :   StarCommaId COMMA IDENTIFIER
+                        {
+                            $$ = $1;
+                            struct node *new_decl = new_node(VarDecl, NULL);
+                            add_child(new_decl, new_node(Identifier, $3));
+                            add_child($$, new_decl);
+
+                            // The type is added in the VarSpec rule
+                        }
+                    |   
+                        {
+                            $$ = new_node(AUX, NULL);
+                        }
                     ;
 
 /*
