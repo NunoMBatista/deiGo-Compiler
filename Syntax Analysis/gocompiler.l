@@ -293,6 +293,8 @@ void yyerror(char *error) {
     else {
         printf("Line %d, column %d: %s: %s\n", syn_line, syn_col, error, yytext);
     }
+
+    free_ast(program);
 }
 
 extern int yylex();
@@ -308,10 +310,12 @@ int main(int argc, char **argv) {
             yylex();    /* run the lexical analysis automaton */
         }
         if(strcmp(argv[1], "-t") == 0) {
-            // PRINT AST
+            dfs(program, 0);
         }
     }
-
+    
+    free_ast(program); // Free AST
+    yylex_destroy(); // Free lexer
     return 0;
 }
 int yywrap() {  /* called on EOF, return 1 to terminate */

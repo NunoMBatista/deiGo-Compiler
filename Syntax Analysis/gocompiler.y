@@ -5,6 +5,7 @@
         Miguel Castela: uc2022212972
 */
 #include "ast.h"
+#include <stdlib.h>
 
 int yylex(void);
 void yyerror(char*);
@@ -29,12 +30,14 @@ struct node *program;
 %token  <lexeme>    STRLIT RESERVED IDENTIFIER NATURAL DECIMAL
 
 // Non-terminal symbols
-%type   <node>      Program VarDecl FuncDecl  FuncParams FuncBody   
-// FuncHeader ParamDecl
+%type   <node>      Program VarDecl FuncDecl FuncParams FuncBody 
+//FuncHeader ParamDecl
+
+
 // Aux Non-terminal symbols 
-%type               Declarations VarSpec Type OptFuncParams OptType
+%type  <node>       Declarations VarSpec Type OptFuncParams OptType
                     VarsAndStatements Statement Expr OptElse StarStatementSc
-                    OptExpr FuncInvocation ParseArgs PosExpr AuxVarFuncDecl
+                    OptExpr FuncInvocation ParseArgs PosExpr 
 
 %left   LOW
 %nonassoc IF ELSE FOR
@@ -56,37 +59,84 @@ struct node *program;
 ....Program(>=0)
 ........{VarDecl/FuncDecl}
 */
-Program             :   PACKAGE IDENTIFIER SEMICOLON Declarations               {;}
+Program             :   PACKAGE IDENTIFIER SEMICOLON Declarations               
+                        {
+                            $$ = program = new_node(Program, NULL); 
+                            add_child($$, $4);
+                        }
                     ;
 
-Declarations        :   AuxVarFuncDecl Declarations                             {;}
-                    |                                                           {;}
+Declarations        :   Declarations FuncDecl SEMICOLON           
+                        {
+                            $$ = $1;
+                            add_child($$, $2);
+                            //add_child($$, new_node(FuncDecl, NULL));
+                        }              
+                    |   Declarations VarDecl SEMICOLON                     
+                        {
+                            $$ = $1;
+                            add_child($$, $2);
+                            //add_child($$, new_node(VarDecl, NULL));
+                        }
+                    |   
+                        {
+                            $$ = new_node(AUX, NULL);
+                        }
                     ;
 
-AuxVarFuncDecl      :   VarDecl SEMICOLON                                       {;}
-                    |   FuncDecl SEMICOLON                                      {;}
-                    ;
 
 /*
 ....VarDecl(1)
-........<type>
+........<typespec>
 ........Identifier
 */
-VarDecl             :   VAR VarSpec                                             {;}
-                    |   VAR LPAR VarSpec SEMICOLON RPAR                         {;}
+VarDecl             :   VAR VarSpec                                             
+                        {
+                            $$ = new_node(AUX, NULL);
+                            add_child($$, $2);
+                        }
+                    |   VAR LPAR VarSpec SEMICOLON RPAR                         
+                        {
+                            $$ = new_node(AUX, NULL);
+                            add_child($$, $3);
+                        }
                     ;   
 
-VarSpec             :   IDENTIFIER Type                                         {;}
-                    |   IDENTIFIER COMMA VarSpec                                {;}
+VarSpec             :   IDENTIFIER Type
+                        {
+                            $$ = new_node(VarDecl, NULL);
+                            add_child($$, $2);
+                            add_child($$, new_node(Identifier, $1));
+                        }
+                    |   IDENTIFIER COMMA VarSpec                                
+                        {
+                            $$ = new_node(VarDecl, NULL);
+                            add_child($$, $3);
+                            add_child($$, new_node(Identifier, $1));
+
+                        }
+                        
                     ;
 
 /*
 LEAF NODES: INT, FLOAT32, BOOL, STRING
 */
-Type                :   INT                                                     {;}
-                    |   FLOAT32                                                 {;}
-                    |   BOOL                                                    {;}
-                    |   STRING                                                  {;}
+Type                :   INT                                                     
+                        {
+                            $$ = new_node(Int, NULL);
+                        }
+                    |   FLOAT32                                                 
+                        {
+                            $$ = new_node(Float32, NULL);    
+                        }
+                    |   BOOL                                                    
+                        {
+                            $$ = new_node(Bool, NULL);
+                        }
+                    |   STRING                                                  
+                        {
+                            $$ = new_node(String, NULL);
+                        }
                     ;
 
 /* 
@@ -99,30 +149,68 @@ Type                :   INT                                                     
 ........FuncBody(>=0)
 ............|SPECIFIED BELOW|
 */
-FuncDecl            :   FUNC IDENTIFIER LPAR OptFuncParams RPAR OptType FuncBody{;}
+FuncDecl            :   FUNC IDENTIFIER LPAR OptFuncParams RPAR OptType FuncBody
+                        {
+                            $$ = new_node(FuncDecl, NULL);
+                            
+                            struct node *new_func_header = new_node(FuncHeader, NULL);
+                            add_child($$, new_func_header);
+                            add_child(new_func_header, new_node(Identifier, $2));
+                            add_child(new_func_header, $6);
+                            add_child(new_func_header, $4);
+
+                            add_child($$, $7);
+                        }
                     ;
 
-OptFuncParams       :   FuncParams                                              {;}                        
-                    |                                                           {;}
+OptFuncParams       :   FuncParams                           
+                        {
+                            $$ = $1;
+                        }                        
+                    |   {;}                                                        
                     ; 
 
-OptType             :   Type                                                    {;}
-                    |                                                           {;}
+OptType             :   Type                                                    
+                        {
+                            $$ = $1;
+                        }
+                    |   {;}
                     ;
 
 /*
 ....FuncParams(>=0)
 ........ParamDecl
 */
-FuncParams          :   IDENTIFIER Type                                         {;}
-                    |   IDENTIFIER Type COMMA FuncParams                        {;}
+FuncParams          :   IDENTIFIER Type                                         
+                        {
+                            $$ = new_node(FuncParams, NULL);
+
+                            struct node *new_param_decl = new_node(ParamDecl, NULL);
+                            add_child($$, new_param_decl);
+                            add_child(new_param_decl, new_node(Identifier, $1));
+                            add_child(new_param_decl, $2);
+
+                        }
+                    |   IDENTIFIER Type COMMA FuncParams                        
+                        {
+                            $$ = $4;
+                            
+                            struct node *new_param_decl = new_node(ParamDecl, NULL);
+                            add_child($$, new_param_decl);
+                            add_child(new_param_decl, new_node(Identifier, $1));
+                            add_child(new_param_decl, $2);  
+                        }
                     ;   
 
 /*
 ....FuncBody(>=0)
 ........<declarations>/<statements>
 */
-FuncBody            :   LBRACE VarsAndStatements RBRACE                         {;}
+FuncBody            :   LBRACE VarsAndStatements RBRACE                         
+                        {
+                            $$ = new_node(FuncBody, NULL);
+                            add_child($$, new_node(If, NULL));
+                        }
                     ;
 
 VarsAndStatements   :   VarsAndStatements SEMICOLON                             {;}
