@@ -16,6 +16,10 @@ struct node *new_node(enum category category, char *token) {
 
 // Append a node to the list of children of the parent node
 void add_child(struct node *parent, struct node *child) {
+    if(parent == NULL || child == NULL){
+        return;
+    }
+
     struct node_list *new = malloc(sizeof(struct node_list));
     new->node = child;
     new->next = NULL;
@@ -77,17 +81,25 @@ void dfs(struct node *cur_node, int depth){
 }
 
 // Free the AST
-void free_ast(struct node *cur_node){
+void free_ast (struct node * cur_node){
     if(cur_node == NULL){
         return;
     }
+
     struct node_list *child = cur_node->children;
-    while((child = child->next) != NULL){
+    while(child != NULL){
+        struct node_list *next = child->next;
         free_ast(child->node);
+        free(child);
+        child = next;
     }
-    free(cur_node->children);
+    if(cur_node->token != NULL){
+        free(cur_node->token);
+        cur_node->token = NULL;
+    }
     free(cur_node);
 }
+
 
 /*
 Count the number of block elements in order to 

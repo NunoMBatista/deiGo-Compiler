@@ -21,10 +21,10 @@
         syn_col = lex_col; \
         syn_line = lex_line; \
         syn_col = lex_col; \
-        lex_col += yyleng; \
-        
+        lex_col += yyleng;
+
     
-    #define PASS_TOKEN() yylval.lexeme = strdup(yytext);
+    #define PASS_TOKEN() yylval.lexeme = strdup(yytext); 
         
     int yyparse(void);
     void yyerror(char*);
@@ -284,9 +284,9 @@ QUOTE                               \"
 
 void yyerror(char *error) {
     errors++;
-    /* printf("Found %s '%s' (%d,%d)\n", error, yytext, syn_line, syn_col); */
     if((yylval.lexeme != NULL) && (yylval.lexeme[0] == '"')){
         printf("Line %d, column %d: %s: %s\n", str_start_line, str_start_col, error, yylval.lexeme);
+        free(yylval.lexeme);
         yylval.lexeme = NULL;
         reset_str_buffer();
     }
@@ -303,21 +303,31 @@ int main(int argc, char **argv) {
         yydebug = 1;
     #endif
 
-    yyparse();
     if(argc > 1) {
         if(strcmp(argv[1], "-l") == 0) {
             lex_only = 1;
             yylex();    /* run the lexical analysis automaton */
         }
         if(strcmp(argv[1], "-t") == 0) {
+            yyparse(); /* run the syntax analysis automaton and print the AST */
             if(errors == 0) {
                 dfs(program, 0);
             }
         }
     }
+    else{
+        yyparse(); /* run the syntax analysis automaton */
+    }
     
     free_ast(program); // Free AST
     yylex_destroy(); // Free lexer
+
+    // There is no need to free the lexeme field of yylval, as it is freed in the error function
+    /* if(yylval.lexeme != NULL) {
+        free(yylval.lexeme);
+        yylval.lexeme = NULL;
+    } */
+
     return 0;
 }
 int yywrap() {  /* called on EOF, return 1 to terminate */

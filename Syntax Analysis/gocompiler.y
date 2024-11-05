@@ -129,10 +129,8 @@ VarSpec             :   IDENTIFIER StarCommaId Type
                                     // Swap the type node with the identifier node
 
                                     // Save identifier name
-                                    char *var_name = cur_var_decl->node->children->next->node->token;
+                                    char *var_name = strdup(cur_var_decl->node->children->next->node->token);
                                     
-                                    
-
                                     add_child(cur_var_decl->node, type_node);
                                     add_child(cur_var_decl->node, new_node(Identifier, var_name));
 

@@ -13,5 +13,5 @@ fi
 yacc -d -v -t -g --report=all gocompiler.y
 lex gocompiler.l
 #dot y.gv -Tpng -o y.png               # LALR automaton in y.png
-cc -o gocompiler lex.yy.c y.tab.c ast.c -Wall -Wextra -Wno-unused-function
+gcc -g -o gocompiler lex.yy.c y.tab.c ast.c -Wall -Wextra -Wno-unused-function
 
