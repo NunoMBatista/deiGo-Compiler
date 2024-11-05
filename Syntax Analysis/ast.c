@@ -35,13 +35,13 @@ void dfs(struct node *cur_node, int depth){
         return;
     }
 
-    // Add indentation according to the current depth
-    for(int i = 0; i < depth; i++){
-        printf("..");
-    }    
 
     // Don't print auxiliary nodes
     if(strcmp(category_name[cur_node->category], "AUX") != 0){
+        // Add indentation according to the current depth
+        for(int i = 0; i < depth; i++){
+            printf("..");
+        }    
         // Print the category and the token (if it exists)
         if(cur_node->token == NULL){
             printf("%s\n", category_name[cur_node->category]);

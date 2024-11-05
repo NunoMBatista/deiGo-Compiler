@@ -66,13 +66,13 @@ Program             :   PACKAGE IDENTIFIER SEMICOLON Declarations
                         }
                     ;
 
-Declarations        :   Declarations FuncDecl SEMICOLON           
+Declarations        :   Declarations FuncDecl SEMICOLON
                         {
                             $$ = $1;
                             add_child($$, $2);
                             //add_child($$, new_node(FuncDecl, NULL));
                         }              
-                    |   Declarations VarDecl SEMICOLON                     
+                    |   Declarations VarDecl SEMICOLON
                         {
                             $$ = $1;
                             add_child($$, $2);
@@ -167,14 +167,20 @@ OptFuncParams       :   FuncParams
                         {
                             $$ = $1;
                         }                        
-                    |   {;}                                                        
+                    |   
+                        {
+                            $$ = new_node(FuncParams, NULL);
+                        }                                                        
                     ; 
 
 OptType             :   Type                                                    
                         {
                             $$ = $1;
                         }
-                    |   {;}
+                    |   
+                        {
+                            $$ = new_node(AUX, NULL);
+                        }
                     ;
 
 /*
@@ -187,18 +193,17 @@ FuncParams          :   IDENTIFIER Type
 
                             struct node *new_param_decl = new_node(ParamDecl, NULL);
                             add_child($$, new_param_decl);
-                            add_child(new_param_decl, new_node(Identifier, $1));
                             add_child(new_param_decl, $2);
-
+                            add_child(new_param_decl, new_node(Identifier, $1));
                         }
-                    |   IDENTIFIER Type COMMA FuncParams                        
+                    |   FuncParams COMMA IDENTIFIER Type
                         {
-                            $$ = $4;
+                            $$ = $1;
                             
                             struct node *new_param_decl = new_node(ParamDecl, NULL);
                             add_child($$, new_param_decl);
-                            add_child(new_param_decl, new_node(Identifier, $1));
-                            add_child(new_param_decl, $2);  
+                            add_child(new_param_decl, $4);  
+                            add_child(new_param_decl, new_node(Identifier, $3));
                         }
                     ;   
 
@@ -209,14 +214,30 @@ FuncParams          :   IDENTIFIER Type
 FuncBody            :   LBRACE VarsAndStatements RBRACE                         
                         {
                             $$ = new_node(FuncBody, NULL);
-                            add_child($$, new_node(If, NULL));
+                            //add_child($$, new_node(If, NULL));
+                            add_child($$, $2);
+                        
                         }
                     ;
 
-VarsAndStatements   :   VarsAndStatements SEMICOLON                             {;}
-                    |   VarsAndStatements VarDecl SEMICOLON                     {;}
-                    |   VarsAndStatements Statement SEMICOLON                   {;}
-                    |                                                           {;} 
+VarsAndStatements   :   VarsAndStatements SEMICOLON                             
+                        {
+                            $$ = $1;
+                        }
+                    |   VarsAndStatements VarDecl SEMICOLON                     
+                        {
+                            $$ = $1;
+                            add_child($$, $2);
+                        }
+                    |   VarsAndStatements Statement SEMICOLON                   
+                        {
+                            $$ = $1;
+                            add_child($$, $2);
+                        }
+                    |                                                           
+                        {
+                            $$ = new_node(AUX, NULL);
+                        } 
                     ;
 
 /*
