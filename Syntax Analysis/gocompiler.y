@@ -423,6 +423,8 @@ FuncInvocation      :   IDENTIFIER LPAR PosExpr RPAR
                         {
                             $$ = new_node(Call, NULL);
                             add_child($$, new_node(Identifier, $1));
+                            struct node *params = new_node(AUX, NULL);
+                            add_child($$, params);
                             add_child($$, $3);
                         }
                     |   IDENTIFIER LPAR error RPAR                               
@@ -433,11 +435,13 @@ FuncInvocation      :   IDENTIFIER LPAR PosExpr RPAR
 
 PosExpr             :   Expr                                                    
                         {
-                            $$ = $1;
+                            $$ = new_node(AUX, NULL);
+                            add_child($$, $1);
                         }
                     |   Expr COMMA PosExpr                                      
                         {
-                            $$ = $1;
+                            $$ = new_node(AUX, NULL);
+                            add_child($$, $1);
                             add_child($$, $3);
                         }
                     |                                                           
