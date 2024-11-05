@@ -77,3 +77,26 @@ void free_ast(struct node *cur_node){
     free(cur_node->children);
     free(cur_node);
 }
+
+/*
+Count the number of block elements in order to 
+determine whether or not the node is supperfluous
+*/
+int block_elements(struct node* cur_node){
+    int count = 0;
+    if(cur_node == NULL){
+        return count;
+    }
+
+    struct node_list *child = cur_node->children;
+    while((child = child->next) != NULL){
+        if(child->node->category != AUX){
+            count++;
+        }
+        else{
+            // If the child node is an auxiliary node, we need to count its children
+            count += block_elements(child->node);
+        }
+    }
+    return count;
+}
