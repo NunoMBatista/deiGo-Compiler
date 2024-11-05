@@ -496,6 +496,8 @@ Expr                :   Expr OR Expr
                     |   Expr GE Expr                                            
                         {
                             $$ = new_node(Ge, NULL);
+                            add_child($$, $1);
+                            add_child($$, $3);
                         }
                     
                     |   Expr PLUS Expr                                          
