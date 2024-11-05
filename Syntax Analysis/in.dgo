@@ -1,31 +1,20 @@
-package main
-
-/*import (
-	"fmt"
-	"os"
-	"strconv"
-)*/
-
-var (ci, rad, area, PI float32;);
-
-func calcArea(rad float32) float32{
-	return PI * rad * rad
-}
-
-func calcCir(rad float32){
-	ci = 2 * PI * rad
-}
+package main;
 
 func main() {
-	PI=3.1415;
-	rad,_ = strconv.Atoi(os.Args[1]);
-	area = calcArea(rad)
-	calcCir(rad)
-	
-	fmt.Println("Area of Circle is : ")
-	fmt.Println(area)
-	fmt.Println("Circumference of Circle is : ")
-	fmt.Println(ci)
-	
-	fmt.Println(area * (area - ci + PI) / -13 && !1) 
+    a = 3 + 1 * 2 + 4 
+
+    w = a ()
+
+    z = a ( 1 + 2, 3 + 4, (5 + 6) * 7, 
+            ( b > c ), d( 8 + 9, f > g ), 
+            0.0, 1, -10, !w)
+
+    a = 1 > 2
+
+    b = !3
+
+    i( s( t( o( n( a( o( f( u( n( c( i( o( n( a( o), u), t), a), l), v), e), z), s), i), m), h), a), h), a)
+
+    
+
 }

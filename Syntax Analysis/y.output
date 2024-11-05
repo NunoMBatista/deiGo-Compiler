@@ -2342,7 +2342,7 @@ State 111
    51     | Expr • LT Expr
    52     | Expr • GT Expr
    53     | Expr • EQ Expr
-   53     | Expr EQ Expr •  [SEMICOLON, COMMA, EQ, LBRACE, NE, AND, OR, RPAR, RSQ]
+   53     | Expr EQ Expr •  [SEMICOLON, COMMA, EQ, GE, GT, LBRACE, LE, LT, NE, AND, OR, RPAR, RSQ]
    54     | Expr • NE Expr
    55     | Expr • LE Expr
    56     | Expr • GE Expr
@@ -2356,10 +2356,6 @@ State 111
     DIV    shift, and go to state 83
     MINUS  shift, and go to state 84
     PLUS   shift, and go to state 85
-    GE     shift, and go to state 87
-    GT     shift, and go to state 88
-    LE     shift, and go to state 89
-    LT     shift, and go to state 90
     MOD    shift, and go to state 91
 
     $default  reduce using rule 53 (Expr)
@@ -2369,10 +2365,10 @@ State 111
     Conflict between rule 53 and token MINUS resolved as shift (EQ < MINUS).
     Conflict between rule 53 and token PLUS resolved as shift (EQ < PLUS).
     Conflict between rule 53 and token EQ resolved as reduce (%left EQ).
-    Conflict between rule 53 and token GE resolved as shift (EQ < GE).
-    Conflict between rule 53 and token GT resolved as shift (EQ < GT).
-    Conflict between rule 53 and token LE resolved as shift (EQ < LE).
-    Conflict between rule 53 and token LT resolved as shift (EQ < LT).
+    Conflict between rule 53 and token GE resolved as reduce (%left GE).
+    Conflict between rule 53 and token GT resolved as reduce (%left GT).
+    Conflict between rule 53 and token LE resolved as reduce (%left LE).
+    Conflict between rule 53 and token LT resolved as reduce (%left LT).
     Conflict between rule 53 and token MOD resolved as shift (EQ < MOD).
     Conflict between rule 53 and token NE resolved as reduce (%left NE).
     Conflict between rule 53 and token AND resolved as reduce (AND < EQ).
@@ -2408,13 +2404,13 @@ State 112
     Conflict between rule 56 and token DIV resolved as shift (GE < DIV).
     Conflict between rule 56 and token MINUS resolved as shift (GE < MINUS).
     Conflict between rule 56 and token PLUS resolved as shift (GE < PLUS).
-    Conflict between rule 56 and token EQ resolved as reduce (EQ < GE).
+    Conflict between rule 56 and token EQ resolved as reduce (%left EQ).
     Conflict between rule 56 and token GE resolved as reduce (%left GE).
     Conflict between rule 56 and token GT resolved as reduce (%left GT).
     Conflict between rule 56 and token LE resolved as reduce (%left LE).
     Conflict between rule 56 and token LT resolved as reduce (%left LT).
     Conflict between rule 56 and token MOD resolved as shift (GE < MOD).
-    Conflict between rule 56 and token NE resolved as reduce (NE < GE).
+    Conflict between rule 56 and token NE resolved as reduce (%left NE).
     Conflict between rule 56 and token AND resolved as reduce (AND < GE).
     Conflict between rule 56 and token OR resolved as reduce (OR < GE).
 
@@ -2448,13 +2444,13 @@ State 113
     Conflict between rule 52 and token DIV resolved as shift (GT < DIV).
     Conflict between rule 52 and token MINUS resolved as shift (GT < MINUS).
     Conflict between rule 52 and token PLUS resolved as shift (GT < PLUS).
-    Conflict between rule 52 and token EQ resolved as reduce (EQ < GT).
+    Conflict between rule 52 and token EQ resolved as reduce (%left EQ).
     Conflict between rule 52 and token GE resolved as reduce (%left GE).
     Conflict between rule 52 and token GT resolved as reduce (%left GT).
     Conflict between rule 52 and token LE resolved as reduce (%left LE).
     Conflict between rule 52 and token LT resolved as reduce (%left LT).
     Conflict between rule 52 and token MOD resolved as shift (GT < MOD).
-    Conflict between rule 52 and token NE resolved as reduce (NE < GT).
+    Conflict between rule 52 and token NE resolved as reduce (%left NE).
     Conflict between rule 52 and token AND resolved as reduce (AND < GT).
     Conflict between rule 52 and token OR resolved as reduce (OR < GT).
 
@@ -2488,13 +2484,13 @@ State 114
     Conflict between rule 55 and token DIV resolved as shift (LE < DIV).
     Conflict between rule 55 and token MINUS resolved as shift (LE < MINUS).
     Conflict between rule 55 and token PLUS resolved as shift (LE < PLUS).
-    Conflict between rule 55 and token EQ resolved as reduce (EQ < LE).
+    Conflict between rule 55 and token EQ resolved as reduce (%left EQ).
     Conflict between rule 55 and token GE resolved as reduce (%left GE).
     Conflict between rule 55 and token GT resolved as reduce (%left GT).
     Conflict between rule 55 and token LE resolved as reduce (%left LE).
     Conflict between rule 55 and token LT resolved as reduce (%left LT).
     Conflict between rule 55 and token MOD resolved as shift (LE < MOD).
-    Conflict between rule 55 and token NE resolved as reduce (NE < LE).
+    Conflict between rule 55 and token NE resolved as reduce (%left NE).
     Conflict between rule 55 and token AND resolved as reduce (AND < LE).
     Conflict between rule 55 and token OR resolved as reduce (OR < LE).
 
@@ -2528,13 +2524,13 @@ State 115
     Conflict between rule 51 and token DIV resolved as shift (LT < DIV).
     Conflict between rule 51 and token MINUS resolved as shift (LT < MINUS).
     Conflict between rule 51 and token PLUS resolved as shift (LT < PLUS).
-    Conflict between rule 51 and token EQ resolved as reduce (EQ < LT).
+    Conflict between rule 51 and token EQ resolved as reduce (%left EQ).
     Conflict between rule 51 and token GE resolved as reduce (%left GE).
     Conflict between rule 51 and token GT resolved as reduce (%left GT).
     Conflict between rule 51 and token LE resolved as reduce (%left LE).
     Conflict between rule 51 and token LT resolved as reduce (%left LT).
     Conflict between rule 51 and token MOD resolved as shift (LT < MOD).
-    Conflict between rule 51 and token NE resolved as reduce (NE < LT).
+    Conflict between rule 51 and token NE resolved as reduce (%left NE).
     Conflict between rule 51 and token AND resolved as reduce (AND < LT).
     Conflict between rule 51 and token OR resolved as reduce (OR < LT).
 
@@ -2581,7 +2577,7 @@ State 117
    52     | Expr • GT Expr
    53     | Expr • EQ Expr
    54     | Expr • NE Expr
-   54     | Expr NE Expr •  [SEMICOLON, COMMA, EQ, LBRACE, NE, AND, OR, RPAR, RSQ]
+   54     | Expr NE Expr •  [SEMICOLON, COMMA, EQ, GE, GT, LBRACE, LE, LT, NE, AND, OR, RPAR, RSQ]
    55     | Expr • LE Expr
    56     | Expr • GE Expr
    57     | Expr • PLUS Expr
@@ -2594,10 +2590,6 @@ State 117
     DIV    shift, and go to state 83
     MINUS  shift, and go to state 84
     PLUS   shift, and go to state 85
-    GE     shift, and go to state 87
-    GT     shift, and go to state 88
-    LE     shift, and go to state 89
-    LT     shift, and go to state 90
     MOD    shift, and go to state 91
 
     $default  reduce using rule 54 (Expr)
@@ -2607,10 +2599,10 @@ State 117
     Conflict between rule 54 and token MINUS resolved as shift (NE < MINUS).
     Conflict between rule 54 and token PLUS resolved as shift (NE < PLUS).
     Conflict between rule 54 and token EQ resolved as reduce (%left EQ).
-    Conflict between rule 54 and token GE resolved as shift (NE < GE).
-    Conflict between rule 54 and token GT resolved as shift (NE < GT).
-    Conflict between rule 54 and token LE resolved as shift (NE < LE).
-    Conflict between rule 54 and token LT resolved as shift (NE < LT).
+    Conflict between rule 54 and token GE resolved as reduce (%left GE).
+    Conflict between rule 54 and token GT resolved as reduce (%left GT).
+    Conflict between rule 54 and token LE resolved as reduce (%left LE).
+    Conflict between rule 54 and token LT resolved as reduce (%left LT).
     Conflict between rule 54 and token MOD resolved as shift (NE < MOD).
     Conflict between rule 54 and token NE resolved as reduce (%left NE).
     Conflict between rule 54 and token AND resolved as reduce (AND < NE).

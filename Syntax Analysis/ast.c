@@ -25,6 +25,17 @@ void add_child(struct node *parent, struct node *child) {
     children->next = new;
 }
 
+// Remove the first child from the list of children of the parent node
+void remove_first_child(struct node *parent) {
+    struct node_list *children = parent->children;
+    if(children->next == NULL)
+        return;
+    struct node_list *new = children->next;
+    parent->children = new;
+    free(children);
+}
+
+
 // Names defined in ast.h
 const char *category_name[] = names;
 

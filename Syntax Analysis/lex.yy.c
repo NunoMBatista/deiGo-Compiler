@@ -2386,7 +2386,9 @@ int main(int argc, char **argv) {
             yylex();    /* run the lexical analysis automaton */
         }
         if(strcmp(argv[1], "-t") == 0) {
-            dfs(program, 0);
+            if(errors == 0) {
+                dfs(program, 0);
+            }
         }
     }
     

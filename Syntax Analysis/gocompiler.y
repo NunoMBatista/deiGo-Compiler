@@ -6,6 +6,7 @@
 */
 #include "ast.h"
 #include <stdlib.h>
+#include <string.h>
 
 int yylex(void);
 void yyerror(char*);
@@ -39,18 +40,17 @@ struct node *program;
                     VarsAndStatements Statement Expr OptElse StarStatementSc
                     OptExpr FuncInvocation ParseArgs PosExpr StarCommaId
 
-%left   LOW
-%nonassoc IF ELSE FOR
-%left   COMMA
-%right  ASSIGN
-%left   OR
-%left   AND
-%left   EQ NE
-%left   LT GT LE GE
-%left   PLUS MINUS
-%left   STAR DIV MOD
-%left   LBRACE RBRACE LPAR RPAR LSQ RSQ
-%right  NOT 
+%left       LOW
+%nonassoc   IF ELSE FOR
+%left       COMMA
+%right      ASSIGN
+%left       OR
+%left       AND
+%left       LT GT LE GE EQ NE
+%left       PLUS MINUS
+%left       STAR DIV MOD
+%left       LBRACE RBRACE LPAR RPAR LSQ RSQ
+%right      NOT 
 
 
 %%
@@ -124,12 +124,21 @@ VarSpec             :   IDENTIFIER StarCommaId Type
                                 // First extra variable declaration ($2 is the AUX node)
                                 struct node_list *cur_var_decl = $2->children->next;
                                 while(cur_var_decl != NULL){
-                                    add_child(cur_var_decl->node, new_node(type, NULL));                                    
-                                    cur_var_decl = cur_var_decl->next;
+                                    struct node *type_node = new_node(type, NULL);
 
-                                    // TODO SWAP CHILD PLACES IN ORDER FOR THE TYPE TO BE THE FIRST CHILD
+                                    // Swap the type node with the identifier node
+
+                                    // Save identifier name
+                                    char *var_name = cur_var_decl->node->children->next->node->token;
                                     
-                            
+                                    
+
+                                    add_child(cur_var_decl->node, type_node);
+                                    add_child(cur_var_decl->node, new_node(Identifier, var_name));
+
+                                    remove_first_child(cur_var_decl->node);                                    
+                                    
+                                    cur_var_decl = cur_var_decl->next;
                                 }
                             }            
                         }
@@ -359,7 +368,10 @@ Statement           :   IDENTIFIER ASSIGN Expr
                             $$ = new_node(Print, NULL);
                             add_child($$, new_node(StrLit, $3));
                         }
-                    |   error                                                   {;}
+                    |   error                                                   
+                        {
+                            $$ = new_node(AUX, NULL);
+                        }
                     ;
 
 StarStatementSc     :   StarStatementSc Statement SEMICOLON                     
@@ -401,7 +413,10 @@ ParseArgs           :   IDENTIFIER COMMA BLANKID ASSIGN PARSEINT LPAR CMDARGS LS
                             //add_child($$, $6);
                             add_child($$, $9);
                         }
-                    |   IDENTIFIER COMMA BLANKID ASSIGN PARSEINT LPAR error RPAR {;}
+                    |   IDENTIFIER COMMA BLANKID ASSIGN PARSEINT LPAR error RPAR 
+                        {
+                            $$ = new_node(AUX, NULL);
+                        }
                     ;
 
 FuncInvocation      :   IDENTIFIER LPAR PosExpr RPAR                            
@@ -410,7 +425,10 @@ FuncInvocation      :   IDENTIFIER LPAR PosExpr RPAR
                             add_child($$, new_node(Identifier, $1));
                             add_child($$, $3);
                         }
-                    |   IDENTIFIER LPAR error RPAR                               {;}    
+                    |   IDENTIFIER LPAR error RPAR                               
+                        {
+                            $$ = new_node(AUX, NULL);
+                        }    
                     ;
 
 PosExpr             :   Expr                                                    
@@ -542,7 +560,10 @@ Expr                :   Expr OR Expr
                         {
                             $$ = $2;
                         }
-                    |   LPAR error RPAR                                         {;}
+                    |   LPAR error RPAR                                         
+                        {
+                            $$ = new_node(AUX, NULL);
+                        }
                     ;
 
 
