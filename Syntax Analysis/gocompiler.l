@@ -10,7 +10,7 @@
     #include "y.tab.h"
     #include "ast.h"
 
-    #define DEBUG
+   // #define DEBUG
 
     #ifdef DEBUG
         extern int yydebug;
@@ -284,7 +284,7 @@ QUOTE                               \"
 void yyerror(char *error) {
     errors++;
     // If the error is in a string literal, print the error with the string literal
-if((yylval.lexeme != NULL) && (yylval.lexeme[0] == '"')){
+    if((yylval.lexeme != NULL) && (yylval.lexeme[0] == '"')){
         printf("Line %d, column %d: %s: %s\n", str_start_line, str_start_col, error, yylval.lexeme);
         free(yylval.lexeme);
         yylval.lexeme = NULL;
@@ -294,7 +294,7 @@ if((yylval.lexeme != NULL) && (yylval.lexeme[0] == '"')){
         printf("Line %d, column %d: %s: %s\n", syn_line, syn_col, error, yytext);
     }
 
-    free_ast(program);
+    //free_ast(program);
 }
 
 extern int yylex();
@@ -302,7 +302,6 @@ int main(int argc, char **argv) {
     #ifdef DEBUG
         yydebug = 1;
     #endif
-    yydebug = 0;
 
     if(argc > 1) {
         if(strcmp(argv[1], "-l") == 0) {
@@ -320,7 +319,8 @@ int main(int argc, char **argv) {
         yyparse(); /* run the syntax analysis automaton */
     }
     
-    free_ast(program); // Free AST
+    if(program != NULL)
+        free_ast(program); // Free AST
     yylex_destroy(); // Free lexer
 
     // There is no need to free the lexeme field of yylval, as it is freed in the error function

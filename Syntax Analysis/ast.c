@@ -90,7 +90,10 @@ void free_ast (struct node * cur_node){
     struct node_list *child = cur_node->children;
     while(child != NULL){
         struct node_list *next = child->next;
-        free_ast(child->node);
+        
+        if(child->node != NULL){
+            free_ast(child->node);
+        }
         free(child);
         child = next;
     }
@@ -101,6 +104,21 @@ void free_ast (struct node * cur_node){
     free(cur_node);
 }
 
+// free the AST
+void deallocate(struct node *node) {
+    if(node != NULL) {
+        struct node_list *child = node->children;
+        while(child != NULL) {
+            deallocate(child->node);
+            struct node_list *tmp = child;
+            child = child->next;
+            free(tmp);
+        }
+        if(node->token != NULL)
+            free(node->token);
+        free(node);
+    }
+}
 
 /*
 Count the number of block elements in order to 
