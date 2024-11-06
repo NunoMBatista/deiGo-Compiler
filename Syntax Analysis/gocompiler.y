@@ -59,7 +59,7 @@ struct node *program;
 ....Program(>=0)
 ........{VarDecl/FuncDecl}
 */
-Program             :   PACKAGE IDENTIFIER SEMICOLON Declarations               
+Program             :   PACKAGE IDENTIFIER SEMICOLON Declarations 
                         {
                             $$ = program = new_node(Program, NULL); 
                             add_child($$, $4);
@@ -123,17 +123,45 @@ VarSpec             :   IDENTIFIER StarCommaId Type
                             if($2 != NULL){
                                 // First extra variable declaration ($2 is the AUX node)
                                 struct node_list *cur_var_decl = $2->children->next;
+                                //dfs(cur_var_decl->node, 0);
                                 while(cur_var_decl != NULL){
                                     struct node *type_node = new_node(type, NULL);
 
-                                    // Swap the type node with the identifier node
+                                    /*
+                                        If we just add the type node, the structure becomes as follows:
+                                        
+                                        VarDecl
+                                        ..Id
+                                        ..Type
+                                        
+                                        We want it to be:
+                                        
+                                        VarDecl
+                                        ..Type
+                                        ..Id
+                                    */
 
                                     // Save identifier name
-                                    char *var_name = strdup(cur_var_decl->node->children->next->node->token);
+                                    struct node *var_decl_node = cur_var_decl->node; // VarDecl node
+                                    struct node *id_node = var_decl_node->children->next->node; // Identifier node
+                                    char *var_name = strdup(id_node->token); // Identifier name
                                     
+                                    
+                                    /*
+                                        Add the type node before the adding the identifier node again
+                                        The structure becomes as follows:
+
+                                        VarDecl
+                                        ..Id
+                                        ..Type
+                                        ..Id
+                                    */
                                     add_child(cur_var_decl->node, type_node);
                                     add_child(cur_var_decl->node, new_node(Identifier, var_name));
 
+                                    /*
+                                        Remove the first node from the VarDecl node
+                                    */
                                     remove_first_child(cur_var_decl->node);                                    
                                     
                                     cur_var_decl = cur_var_decl->next;

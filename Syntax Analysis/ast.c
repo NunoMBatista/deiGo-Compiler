@@ -50,9 +50,8 @@ void dfs(struct node *cur_node, int depth){
         return;
     }
 
-
     // Don't print auxiliary nodes
-    if(strcmp(category_name[cur_node->category], "AUX") != 0){
+    if(cur_node->category != AUX){
         // Add indentation according to the current depth
         for(int i = 0; i < depth; i++){
             printf("..");
@@ -67,10 +66,12 @@ void dfs(struct node *cur_node, int depth){
     }
     
     // Visit all children
+    if(cur_node->children == NULL){
+        return;
+    }
     struct node_list *child = cur_node->children;
     while((child = child->next) != NULL){
-
-        if(strcmp(category_name[child->node->category], "AUX") == 0){
+        if(child->node->category == AUX){
             // Don't increase the depth for auxiliary nodes
             dfs(child->node, depth);
         }

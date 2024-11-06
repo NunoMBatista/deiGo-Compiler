@@ -10,7 +10,7 @@
     #include "y.tab.h"
     #include "ast.h"
 
-    //#define DEBUG
+    #define DEBUG
 
     #ifdef DEBUG
         extern int yydebug;
@@ -20,7 +20,6 @@
     #define YY_USER_ACTION \
         syn_col = lex_col; \
         syn_line = lex_line; \
-        syn_col = lex_col; \
         lex_col += yyleng;
 
     
@@ -278,13 +277,14 @@ QUOTE                               \"
                                         return_eof = 1;
                                     }
 
-.                                   { printf("Line %d, column %d: illegal character (%s)\n", lex_line, lex_col - yyleng, yytext); }
+.                                   { printf("Line %d, column %d: illegal character (%s)\n", lex_line, lex_col - yyleng, yytext); } 
 
 %%
 
 void yyerror(char *error) {
     errors++;
-    if((yylval.lexeme != NULL) && (yylval.lexeme[0] == '"')){
+    // If the error is in a string literal, print the error with the string literal
+if((yylval.lexeme != NULL) && (yylval.lexeme[0] == '"')){
         printf("Line %d, column %d: %s: %s\n", str_start_line, str_start_col, error, yylval.lexeme);
         free(yylval.lexeme);
         yylval.lexeme = NULL;
@@ -302,6 +302,7 @@ int main(int argc, char **argv) {
     #ifdef DEBUG
         yydebug = 1;
     #endif
+    yydebug = 0;
 
     if(argc > 1) {
         if(strcmp(argv[1], "-l") == 0) {
