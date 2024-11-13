@@ -50,19 +50,16 @@ void dfs(struct node *cur_node, int depth){
         return;
     }
 
-    // Don't print auxiliary nodes
-    if(cur_node->category != AUX){
-        // Add indentation according to the current depth
-        for(int i = 0; i < depth; i++){
-            printf("..");
-        }    
-        // Print the category and the token (if it exists)
-        if(cur_node->token == NULL){
-            printf("%s\n", category_name[cur_node->category]);
-        }
-        else{
-            printf("%s(%s)\n", category_name[cur_node->category], cur_node->token);
-        }
+    // Add indentation according to the current depth
+    for(int i = 0; i < depth; i++){
+        printf("..");
+    }    
+    // Print the category and the token (if it exists)
+    if(cur_node->token == NULL){
+        printf("%s\n", category_name[cur_node->category]);
+    }
+    else{
+        printf("%s(%s)\n", category_name[cur_node->category], cur_node->token);
     }
     
     // Visit all children
@@ -71,13 +68,7 @@ void dfs(struct node *cur_node, int depth){
     }
     struct node_list *child = cur_node->children;
     while((child = child->next) != NULL){
-        if(child->node->category == AUX){
-            // Don't increase the depth for auxiliary nodes
-            dfs(child->node, depth);
-        }
-        else{
-            dfs(child->node, depth+1);
-        }
+        dfs(child->node, depth+1);
     }
 }
 
@@ -141,4 +132,55 @@ int block_elements(struct node* cur_node){
         }
     }
     return count;
+}
+
+void remove_aux(struct node *parent) {
+    if (parent == NULL || parent->children == NULL) {
+        return;
+    }
+
+    struct node_list *prev = parent->children;
+    struct node_list *current = prev->next;
+
+    while (current != NULL) {
+        if (current->node->category == AUX) {
+            // The AUX node's children should go into it's parent's child list at the AUX node's position
+            struct node_list *aux_children = current->node->children->next;
+
+            if (aux_children != NULL) {
+                // Find the last AUX child
+                struct node_list *last_aux_child = aux_children;
+                while (last_aux_child->next != NULL) {
+                    last_aux_child = last_aux_child->next;
+                }
+
+                // Link previous parent node to AUX node's first child
+                prev->next = aux_children;
+
+                // Link last AUX child to AUX node's next node in the parent's list
+                last_aux_child->next = current->next;
+            } 
+            else {
+                // The AUX node is a leaf
+                prev->next = current->next;
+            }
+
+            // Free the AUX node and it's children
+            free(current->node->children);
+            free(current->node);
+
+
+            struct node_list *temp = current;
+            current = prev->next; // Changed from current->next to prev->next
+            free(temp);
+
+            // Only update prev if the current node was not removed
+        } 
+        else {
+            // Continue DFS
+            remove_aux(current->node);
+            prev = current;
+            current = current->next;
+        }
+    }
 }

@@ -20,6 +20,7 @@ struct node *new_node(enum category category, char *token);
 void add_child(struct node *parent, struct node *child);
 void remove_first_child(struct node *parent);
 void dfs(struct node *cur_node, int depth);
+void remove_aux(struct node *cur_node);
 void free_ast(struct node *cur_node);
 int block_elements(struct node* cur_node);
 

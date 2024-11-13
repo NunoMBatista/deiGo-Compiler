@@ -311,6 +311,7 @@ int main(int argc, char **argv) {
         if(strcmp(argv[1], "-t") == 0) {
             yyparse(); /* run the syntax analysis automaton and print the AST */
             if(errors == 0) {
+                remove_aux(program);
                 dfs(program, 0);
             }
         }
@@ -322,12 +323,6 @@ int main(int argc, char **argv) {
     if(program != NULL)
         free_ast(program); // Free AST
     yylex_destroy(); // Free lexer
-
-    // There is no need to free the lexeme field of yylval, as it is freed in the error function
-    /* if(yylval.lexeme != NULL) {
-        free(yylval.lexeme);
-        yylval.lexeme = NULL;
-    } */
 
     return 0;
 }
