@@ -64,6 +64,8 @@ char *category_to_operator(enum category cat){
             return "-";
         case Plus:
             return "+";
+        case ParseArgs:
+            return "strconv.Aroi";
         default:
             return "";
     }
@@ -84,7 +86,6 @@ int check_program(struct node *program){
 
     struct node_list *cur_child = program->children;
 
-    // First pass: collect global variable and function declarations
     while((cur_child = cur_child->next) != NULL){
         struct node *cur_node = cur_child->node;
         enum category cur_category = cur_node->category;
@@ -92,93 +93,10 @@ int check_program(struct node *program){
             check_var_decl(cur_node, symbol_table);
         }
         if(cur_category == FuncDecl){
-            add_func_to_symbol_table(cur_node);
-        }
-    }
-
-    // Second pass: process function bodies
-    cur_child = program->children;
-    while((cur_child = cur_child->next) != NULL){
-        struct node *cur_node = cur_child->node;
-        if(cur_node->category == FuncDecl){
-            process_func_body(cur_node);
+            check_func_decl(cur_node);
         }
     }
     return semantic_errors;
-}
-
-void add_func_to_symbol_table(struct node *func_decl){
-    struct node *func_header = get_child(func_decl, 0);
-    struct node *id = get_child(func_header, 0);
-
-    if(search_symbol(symbol_table, id->token) != NULL){
-        semantic_errors++;
-        printf("Line %d, column %d: Symbol %s already defined\n", id->token_line, id->token_column, id->token);
-        return;
-    }
-
-    // Get the return type of the function
-    struct node *return_type_node = get_child(func_header, 1);
-
-    enum type return_type;
-    if(return_type_node->category == FuncParams){
-        return_type = none;
-    }
-    else{
-        return_type = category_to_type(return_type_node->category);
-    }
-
-    // Insert the function id in the global symbol table
-    insert_symbol(symbol_table, id->token, return_type, func_decl, 0);
-}
-
-void process_func_body(struct node *func_decl){
-    struct node *func_header = get_child(func_decl, 0);
-    struct node *id = get_child(func_header, 0);
-
-    // Get the return type from the symbol table
-    struct symbol_list *func_symbol = search_symbol(symbol_table, id->token);
-    enum type return_type = func_symbol->type;
-
-    // Get function parameters
-    struct node *return_type_node = get_child(func_header, 1);
-    struct node *func_params;
-    if(return_type_node->category == FuncParams){
-        func_params = return_type_node;
-    } else {
-        func_params = get_child(func_header, 2);
-    }
-
-    // Create a new scope for the function
-    struct symbol_list *new_scope = (struct symbol_list *) malloc(sizeof(struct symbol_list));
-    new_scope->identifier = strdup(id->token);
-    new_scope->next = NULL;
-
-    // Insert the return type in the new scope
-    insert_symbol(new_scope, "return", return_type, NULL, 0);
-
-    // Add the new scope to the queue
-    struct scopes_queue *new_queue_entry = malloc(sizeof(struct scopes_queue));
-    new_queue_entry->table = new_scope;
-    new_queue_entry->next = NULL;
-    new_queue_entry->identifier = strdup(id->token);
-
-    if (symbol_scopes == NULL) {
-        symbol_scopes = new_queue_entry;
-    } else {
-        struct scopes_queue *current = symbol_scopes;
-        while (current->next != NULL) {
-            current = current->next;
-        }
-        current->next = new_queue_entry;
-    }
-
-    // Check the function parameters
-    check_parameters(func_params, new_scope);
-
-    // Check the function body
-    struct node *func_body = get_child(func_decl, func_decl->children->next->next ? 2 : 1);
-    check_func_body(func_body, new_scope);
 }
 
 void check_func_decl(struct node *func_decl){
@@ -314,6 +232,34 @@ void check_statements(struct node *statement, struct symbol_list *scope){
             check_statements(cur_node, scope);
         }
     }
+    if(cur_category == Print){
+        struct node *right = get_child(statement, 0);
+        check_expression(right, scope);
+    }
+    // Right must be int and left must be int or string
+    if(cur_category == ParseArgs){
+        check_parse_args(statement, scope);
+    }
+}
+
+void check_parse_args(struct node *parse_args, struct symbol_list *scope){
+    if(parse_args == NULL){
+        return;
+    }
+    struct node *right = get_child(parse_args, 0);
+    struct node *left = get_child(parse_args, 1);
+    
+    enum type left_type = check_expression(left, scope);
+    enum type right_type = check_expression(right, scope);
+
+    if(right_type != integer || (left_type != integer && left_type != string)){
+        semantic_errors++;
+        printf("Line %d, column %d: Operator strconv.Atoi cannot be applied to types %s, %s\n", parse_args->token_line, parse_args->token_column, type_name[right_type], type_name[left_type]);
+    }
+
+    // Annotate the AST
+    parse_args->type = left_type;
+
 }
 
 // Checks function calls both as statements and as expressions
@@ -341,7 +287,6 @@ enum type check_call(struct node *call_node, struct symbol_list *scope, int is_s
     if (len > 0) {
         call_args_types[len - 1] = '\0';
     }
-
 
     // Get the original function's parameters
     char *func_params_types = get_func_parameter_types(id->token, NULL);
@@ -389,13 +334,11 @@ void check_return(struct node *return_node, struct symbol_list *scope){
     else{
         return_type = check_expression(return_expr, scope);
     }
-    
-    // Check if the type of the expression being returned is the same as the return type of the function
-    if(return_type == none && search_symbol(scope, "return")->type != none){
-        semantic_errors++;
-        printf("Line %d, column %d: Incompatible type none in return statement\n", return_expr->token_line, return_expr->token_column);
+       
+    if(return_type == none){
+        return;
     }
-    else if(return_type != none && return_type != search_symbol(scope, "return")->type){
+    else if(return_type != search_symbol(scope, "return")->type){
         semantic_errors++;
         printf("Line %d, column %d: Incompatible type %s in return statement\n", return_expr->token_line, return_expr->token_column, type_name[return_type]);
     }
@@ -408,15 +351,22 @@ void check_for(struct node *for_node, struct symbol_list *scope){
     }
 
     struct node *for_expr = get_child(for_node, 0);
-    struct node *for_block = get_child(for_node, 1);
-    
-    enum type expr_type = undef;
+    struct node *for_block;
+    if(for_expr->category == Block){
+        for_block = for_expr;
+        for_expr = NULL;
+    }
+    else{
+        for_block = get_child(for_node, 1);
+    }
+
+    enum type expr_type = none;
     
     if(for_expr != NULL){
         expr_type = check_expression(for_expr, scope);
     }
 
-    if(expr_type != bool){
+    if(expr_type != bool && expr_type != none && expr_type != undef){
         semantic_errors++;
         printf("Line %d, column %d: Incompatible type %s in for statement\n", for_expr->token_line, for_expr->token_column, type_name[expr_type]);
     }
@@ -533,9 +483,9 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
                    category_to_operator(expression->category),
                    type_name[left_type], type_name[right_type]);
             expr_type = undef;
-        } else {
-            expr_type = bool;
         }
+
+        expr_type = bool;
         expression->type = expr_type;
         return expr_type;
     }
@@ -552,9 +502,9 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
                    category_to_operator(expression->category),
                    type_name[left_type], type_name[right_type]);
             expr_type = undef;
-        } else {
-            expr_type = bool;
         }
+
+        expr_type = bool;
         expression->type = expr_type;
         return expr_type;
     }
@@ -570,10 +520,9 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
                    expression->token_line, expression->token_column,
                    category_to_operator(expression->category),
                    type_name[left_type], type_name[right_type]);
-            expr_type = undef;
-        } else {
-            expr_type = bool;
-        }
+        } 
+
+        expr_type = bool;
         expression->type = expr_type;
         return expr_type;
     }

@@ -2011,7 +2011,7 @@ yyreduce:
                             add_child((yyval.node), new_node(Identifier, (yyvsp[-10].lexeme)));
                             add_child((yyval.node), (yyvsp[-2].node));
 
-                            LOCATE(get_child((yyval.node), 0), (yylsp[-10]).first_line, (yylsp[-10]).first_column);
+                            LOCATE((yyval.node), (yylsp[-6]).first_line, (yylsp[-6]).first_column);
                         }
 #line 2017 "y.tab.c"
     break;

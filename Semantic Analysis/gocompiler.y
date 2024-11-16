@@ -450,7 +450,7 @@ ParseArgs           :   IDENTIFIER COMMA BLANKID ASSIGN PARSEINT LPAR CMDARGS LS
                             add_child($$, new_node(Identifier, $1));
                             add_child($$, $9);
 
-                            LOCATE(get_child($$, 0), @1.first_line, @1.first_column);
+                            LOCATE($$, @5.first_line, @5.first_column);
                         }
                     |   IDENTIFIER COMMA BLANKID ASSIGN PARSEINT LPAR error RPAR 
                         {

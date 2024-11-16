@@ -27,6 +27,7 @@ void check_var_decl(struct node *var_decl, struct symbol_list *scope);
 void check_func_decl(struct node *func_decl);
 void check_parameters(struct node *func_params, struct symbol_list *scope);
 void check_func_body(struct node *func_body, struct symbol_list *scope);
+void check_parse_args(struct node *parse_args, struct symbol_list *scope);
 
 void check_statements(struct node *cur_node, struct symbol_list *scope);
 enum type check_call(struct node *call_node, struct symbol_list *scope, int is_statement);
