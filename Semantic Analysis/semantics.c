@@ -9,6 +9,7 @@ int semantic_errors = 0;
 struct symbol_list *symbol_table;
 struct scopes_queue *symbol_scopes;
 
+
 extern char *type_name[];
 
 enum type category_to_type(enum category category){
@@ -95,6 +96,16 @@ int check_program(struct node *program){
         }
     }
 
+    // Start checking the function bodies
+    struct scopes_queue *cur_scope = symbol_scopes;
+    while (cur_scope != NULL) {
+        check_func_body(cur_scope->func_body, cur_scope->table);
+        cur_scope = cur_scope->next;
+    }
+
+    
+
+
     print_unused_symbols();
     return semantic_errors;
 }
@@ -161,7 +172,9 @@ void check_func_decl(struct node *func_decl){
     check_parameters(func_params, new_scope);
 
     struct node *func_body = get_child(func_decl, 1);
-    check_func_body(func_body, new_scope);
+
+    // Store the function body in the scope queue
+    new_queue_entry->func_body = func_body;
 }
 
 void check_parameters(struct node *func_params, struct symbol_list *scope){

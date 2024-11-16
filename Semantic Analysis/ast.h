@@ -24,6 +24,7 @@ struct node_list {
     struct node_list *next;
 };
 
+
 struct node *new_node(enum category category, char *token);
 void add_child(struct node *parent, struct node *child);
 void remove_first_child(struct node *parent);

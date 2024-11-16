@@ -17,6 +17,7 @@ struct symbol_list {
 struct scopes_queue {
     struct symbol_list *table;
     struct scopes_queue *next;
+    struct node *func_body; // The function body node is stored here so it can be processed after the function declarations
     char *identifier;
 };
 
