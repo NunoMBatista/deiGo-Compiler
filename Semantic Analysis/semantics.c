@@ -64,8 +64,6 @@ char *category_to_operator(enum category cat){
             return "-";
         case Plus:
             return "+";
-        case ParseArgs:
-            return "strconv.Aroi";
         default:
             return "";
     }
@@ -127,7 +125,6 @@ void check_func_decl(struct node *func_decl){
         return_type = category_to_type(return_type_node->category);
         func_params = get_child(func_header, 2); // The parameters are the third child of the FuncHeader if there is a return type
     }
-
 
     // Insert the function id in the global symbol table
     insert_symbol(symbol_table, id->token, return_type, func_decl, 0);
@@ -234,7 +231,12 @@ void check_statements(struct node *statement, struct symbol_list *scope){
     }
     if(cur_category == Print){
         struct node *right = get_child(statement, 0);
-        check_expression(right, scope);
+        enum type right_type = check_expression(right, scope);
+        if(right_type == undef){
+            semantic_errors++;
+            printf("Line %d, column %d: Incompatible type %s in fmt.Println statement\n", right->token_line, right->token_column, type_name[right_type]);
+        }
+
     }
     // Right must be int and left must be int or string
     if(cur_category == ParseArgs){
@@ -330,15 +332,18 @@ void check_return(struct node *return_node, struct symbol_list *scope){
     enum type return_type;
     if(return_expr == NULL){
         return_type = none;
+        return;
     }
     else{
         return_type = check_expression(return_expr, scope);
     }
-       
-    if(return_type == none){
+
+    enum type declared_return_type = search_symbol(scope, "return")->type;
+    
+    if(declared_return_type == none){
         return;
     }
-    else if(return_type != search_symbol(scope, "return")->type){
+    if(return_type != declared_return_type){
         semantic_errors++;
         printf("Line %d, column %d: Incompatible type %s in return statement\n", return_expr->token_line, return_expr->token_column, type_name[return_type]);
     }
@@ -431,7 +436,7 @@ void check_assign(struct node *assign, struct symbol_list *scope){
     enum type right_type = check_expression(right, scope);
     right->type = right_type;
 
-    if(left_type != right_type){
+    if((left_type != right_type) || (left_type == undef) || (right_type == undef)){
         semantic_errors++;
         printf("Line %d, column %d: Operator = cannot be applied to types %s, %s\n", assign->token_line, assign->token_column, type_name[left_type], type_name[right_type]);
         assign->type = undef;
@@ -580,7 +585,7 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
 
 
     // If the expression can't be matched
-    expr_type = undef;
+    expr_type = none;
     expression->type = expr_type;
     return expr_type;
 }
@@ -628,6 +633,7 @@ struct symbol_list *insert_symbol(struct symbol_list *table, char *identifier, e
     new->node = node;
     new->next = NULL;
     new->is_parameter = is_parameter;
+    new->was_used = 0;
     struct symbol_list *symbol = table;
     while(symbol != NULL) {
         if(symbol->next == NULL) {
@@ -701,14 +707,14 @@ char *get_func_parameter_types(char *function_name, struct scopes_queue *scope) 
 }
 
 void show_symbol_table() {
-    printf("==== Global Scope ====\n");
+    printf("===== Global Symbol Table =====\n");
     struct symbol_list *symbol;
     for(symbol = symbol_table->next; symbol != NULL; symbol = symbol->next){
         if(symbol->node->category == FuncDecl){
-            printf("%s    (%s)    %s\n", symbol->identifier, get_func_parameter_types(symbol->identifier, NULL), type_name[symbol->type]);
+            printf("%s\t(%s)\t%s\n", symbol->identifier, get_func_parameter_types(symbol->identifier, NULL), type_name[symbol->type]);
         }
         if(symbol->node->category == VarDecl){
-            printf("%s    %s\n", symbol->identifier, type_name[symbol->type]);
+            printf("%s\t\t%s\n", symbol->identifier, type_name[symbol->type]);
         }
     }
     printf("\n");
@@ -719,11 +725,11 @@ void show_symbol_scopes() {
     // Print the scopes in FIFO order
     struct scopes_queue *cur_scope = symbol_scopes;
     while (cur_scope != NULL) {
-        printf("==== Function %s(%s) Symbol Table ====\n",
+        printf("===== Function %s(%s) Symbol Table =====\n",
                cur_scope->identifier, get_func_parameter_types(NULL, cur_scope));
         struct symbol_list *cur_symbol = cur_scope->table;
         while ((cur_symbol = cur_symbol->next) != NULL) {
-            printf("%s    %s", cur_symbol->identifier, type_name[cur_symbol->type]);
+            printf("%s\t\t%s", cur_symbol->identifier, type_name[cur_symbol->type]);
             if (cur_symbol->is_parameter) {
                 printf("\tparam");
             }

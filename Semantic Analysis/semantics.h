@@ -9,6 +9,7 @@ struct symbol_list {
     struct node *node; 
     int is_parameter;
     struct symbol_list *next;
+    int was_used;
 };
 
 // Sequence of symbol lists
