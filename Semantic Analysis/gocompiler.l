@@ -19,8 +19,8 @@
 
     // This macro is executed before each token is returned
     #define YY_USER_ACTION \
-        syn_col = lex_col; \
-        syn_line = lex_line; \
+        syn_line = yylloc.first_line = lex_line; \
+        syn_col = yylloc.first_column = lex_col; \
         lex_col += yyleng;
 
     
@@ -327,10 +327,9 @@ int main(int argc, char **argv) {
                     // Print symbol tables 
                     show_symbol_table();
                     show_symbol_scopes();
-
-                    printf("\n");
-
+                    
                     // Print annotated AST
+                    dfs(program, 0);
                 }                
                                 
             }
@@ -338,8 +337,9 @@ int main(int argc, char **argv) {
     }
     else{
         yyparse(); 
+        remove_aux(program);
         if(errors == 0) {
-            errors = check_program(program);
+            errors += check_program(program);
         }
     }
     

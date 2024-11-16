@@ -1,8 +1,9 @@
 package main;
 
-var game int;
+var games int;
 
-func factorial(n int) int {
+func factorial(n int, t int) int {
+
     if n == 0 {
         return 1;
     };

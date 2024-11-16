@@ -11,8 +11,7 @@ Line 32, column 6: Cannot find symbol func2(int,int,float32,float32)
 Line 33, column 10: Operator strconv.Atoi cannot be applied to types int, float32
 Line 34, column 4: Operator = cannot be applied to types int, undef
 Line 34, column 6: Cannot find symbol func2
-Line 35, column 57: Operator + cannot be applied to types int, float32
-Line 35, column 61: Operator + cannot be applied to types undef, float32
+Line 35, column 57: Operator + cannot be applied to types int, float32S
 Line 35, column 7: Operator = cannot be applied to types float32, undef
 Line 35, column 9: Cannot find symbol func1(int,int,float32,undef)
 Line 37, column 13: Operator strconv.Atoi cannot be applied to types int, undef

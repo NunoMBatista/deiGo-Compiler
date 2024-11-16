@@ -9,6 +9,7 @@ struct node *new_node(enum category category, char *token) {
     new->category = category;
     new->token = token;
     new->type = none;
+    new->parameter_list = NULL;
     new->children = malloc(sizeof(struct node_list));
     new->children->node = NULL;
     new->children->next = NULL;
@@ -51,10 +52,10 @@ struct node *get_child(struct node *parent, int position) {
 
 // Names defined in ast.h
 const char *category_name[] = names;
+const char *type_name[] = t_name;
 
 // Perform a depth-first search to print the AST
 void dfs(struct node *cur_node, int depth){
-    // No AST
     if(cur_node == NULL){
         return;
     }
@@ -65,11 +66,19 @@ void dfs(struct node *cur_node, int depth){
     }    
     // Print the category and the token (if it exists)
     if(cur_node->token == NULL){
-        printf("%s\n", category_name[cur_node->category]);
+        printf("%s", category_name[cur_node->category]);
     }
     else{
-        printf("%s(%s)\n", category_name[cur_node->category], cur_node->token);
+        printf("%s(%s)", category_name[cur_node->category], cur_node->token);
     }
+
+    // Print the type (if it exists)
+    if(cur_node->type != none){
+        printf(" - %s", type_name[cur_node->type]);
+    }
+
+
+    printf("\n");
     
     // Visit all children
     if(cur_node->children == NULL){

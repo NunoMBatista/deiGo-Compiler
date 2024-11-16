@@ -22,6 +22,11 @@ struct node *program;
     struct node *node;
 }
 
+%locations
+%{
+#define LOCATE(node, line, column) { node->token_line = line; node->token_column = column;}
+%}
+
 // Terminal symbols without associated values
 %token              SEMICOLON COMMA STAR DIV MINUS PLUS EQ GE GT LBRACE LE LPAR LSQ LT 
                     MOD NE NOT AND OR PACKAGE ELSE FOR IF VAR INT FLOAT32 BOOL STRING PRINT PARSEINT 
@@ -116,8 +121,9 @@ VarSpec             :   IDENTIFIER StarCommaId Type
                             add_child(new_decl, new_node(Identifier, $1));
                             add_child($$, new_decl);
                             add_child($$, $2);
-
                             
+                            LOCATE(get_child(new_decl, 1), @1.first_line, @1.first_column);
+
                             enum category type = $3->category;
                             // Pass down the type to the extra variable declarations
                             if($2 != NULL){
@@ -228,6 +234,8 @@ FuncDecl            :   FUNC IDENTIFIER LPAR OptFuncParams RPAR OptType FuncBody
                             add_child(new_func_header, $4);
 
                             add_child($$, $7);
+
+                            LOCATE(get_child(new_func_header, 0), @2.first_line, @2.first_column);
                         }
                     ;
 
@@ -263,6 +271,8 @@ FuncParams          :   IDENTIFIER Type
                             add_child($$, new_param_decl);
                             add_child(new_param_decl, $2);
                             add_child(new_param_decl, new_node(Identifier, $1));
+
+                            LOCATE(get_child(new_param_decl, 1), @1.first_line, @1.first_column);
                         }
                     |   FuncParams COMMA IDENTIFIER Type
                         {
@@ -272,6 +282,8 @@ FuncParams          :   IDENTIFIER Type
                             add_child($$, new_param_decl);
                             add_child(new_param_decl, $4);  
                             add_child(new_param_decl, new_node(Identifier, $3));
+
+                            LOCATE(get_child(new_param_decl, 1), @3.first_line, @3.first_column);
                         }
                     ;   
 
@@ -282,9 +294,7 @@ FuncParams          :   IDENTIFIER Type
 FuncBody            :   LBRACE VarsAndStatements RBRACE                         
                         {
                             $$ = new_node(FuncBody, NULL);
-                            //add_child($$, new_node(If, NULL));
                             add_child($$, $2);
-                        
                         }
                     ;
 
@@ -337,6 +347,9 @@ Statement           :   IDENTIFIER ASSIGN Expr
                             $$ = new_node(Assign, NULL);
                             add_child($$, new_node(Identifier, $1));
                             add_child($$, $3);
+
+                            LOCATE(get_child($$, 0), @1.first_line, @1.first_column);
+                            LOCATE($$, @2.first_line, @2.first_column);
                         }
                     |   LBRACE StarStatementSc RBRACE                           
                         {
@@ -435,9 +448,9 @@ ParseArgs           :   IDENTIFIER COMMA BLANKID ASSIGN PARSEINT LPAR CMDARGS LS
                         {
                             $$ = new_node(ParseArgs, NULL);
                             add_child($$, new_node(Identifier, $1));
-                            //add_child($$, new_node(Identifier, $3));
-                            //add_child($$, $6);
                             add_child($$, $9);
+
+                            LOCATE(get_child($$, 0), @1.first_line, @1.first_column);
                         }
                     |   IDENTIFIER COMMA BLANKID ASSIGN PARSEINT LPAR error RPAR 
                         {
@@ -452,6 +465,8 @@ FuncInvocation      :   IDENTIFIER LPAR PosExpr RPAR
                             struct node *params = new_node(AUX, NULL);
                             add_child($$, params);
                             add_child($$, $3);
+
+                            LOCATE(get_child($$, 0), @1.first_line, @1.first_column);
                         }
                     |   IDENTIFIER LPAR error RPAR                               
                         {
@@ -481,12 +496,14 @@ Expr                :   Expr OR Expr
                             $$ = new_node(Or, NULL);
                             add_child($$, $1);
                             add_child($$, $3);
+                            LOCATE($$, @2.first_line, @2.first_column);
                         }
                     |   Expr AND Expr                                           
                         {
                             $$ = new_node(And, NULL);
                             add_child($$, $1);
                             add_child($$, $3);
+                            LOCATE($$, @2.first_line, @2.first_column);
                         }
 
                     |   Expr LT Expr                                            
@@ -494,36 +511,42 @@ Expr                :   Expr OR Expr
                             $$ = new_node(Lt, NULL);
                             add_child($$, $1);
                             add_child($$, $3);
+                            LOCATE($$, @2.first_line, @2.first_column);
                         }
                     |   Expr GT Expr                                            
                         {
                             $$ = new_node(Gt, NULL);
                             add_child($$, $1);
                             add_child($$, $3);
+                            LOCATE($$, @2.first_line, @2.first_column);
                         }
                     |   Expr EQ Expr                                            
                         {
                             $$ = new_node(Eq, NULL);
                             add_child($$, $1);
                             add_child($$, $3);
+                            LOCATE($$, @2.first_line, @2.first_column);
                         }
                     |   Expr NE Expr                                            
                         {
                             $$ = new_node(Ne, NULL);
                             add_child($$, $1);
                             add_child($$, $3);
+                            LOCATE($$, @2.first_line, @2.first_column);
                         }
                     |   Expr LE Expr                                            
                         {
                             $$ = new_node(Le, NULL);
                             add_child($$, $1);
                             add_child($$, $3);
+                            LOCATE($$, @2.first_line, @2.first_column);
                         }
                     |   Expr GE Expr                                            
                         {
                             $$ = new_node(Ge, NULL);
                             add_child($$, $1);
                             add_child($$, $3);
+                            LOCATE($$, @2.first_line, @2.first_column);
                         }
                     
                     |   Expr PLUS Expr                                          
@@ -531,30 +554,35 @@ Expr                :   Expr OR Expr
                             $$ = new_node(Add, NULL);
                             add_child($$, $1);
                             add_child($$, $3);
+                            LOCATE($$, @2.first_line, @2.first_column);
                         }
                     |   Expr MINUS Expr                                         
                         {
                             $$ = new_node(Sub, NULL);
                             add_child($$, $1);
                             add_child($$, $3);
+                            LOCATE($$, @2.first_line, @2.first_column);
                         }
                     |   Expr STAR Expr                                          
                         {
                             $$ = new_node(Mul, NULL);
                             add_child($$, $1);
                             add_child($$, $3);
+                            LOCATE($$, @2.first_line, @2.first_column);
                         }       
                     |   Expr DIV Expr                                           
                         {
                             $$ = new_node(Div, NULL);
                             add_child($$, $1);
                             add_child($$, $3);
+                            LOCATE($$, @2.first_line, @2.first_column);
                         }
                     |   Expr MOD Expr                                           
                         {
                             $$ = new_node(Mod, NULL);
                             add_child($$, $1);
                             add_child($$, $3);
+                            LOCATE($$, @2.first_line, @2.first_column);
                         }
 
                     |   MINUS Expr              %prec NOT                       
@@ -583,6 +611,8 @@ Expr                :   Expr OR Expr
                     |   IDENTIFIER                                              
                         {
                             $$ = new_node(Identifier, $1);
+
+                            LOCATE($$, @1.first_line, @1.first_column);
                         }
                     |   FuncInvocation                                          
                         {

@@ -301,7 +301,7 @@ Program
 ..........Identifier(a) - float32
 ......Assign - float32
 ........Identifier(a) - float32
-........Identifier(c) - float32
+........IdentifFer(c) - float32
 ......Assign - float32
 ........Identifier(d) - float32
 ........Add - float32
