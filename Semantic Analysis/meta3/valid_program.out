@@ -223,7 +223,7 @@ Program
 ..........String
 ..........Identifier(safch)
 ....FuncBody
-......Call - int
+......Call
 ........Identifier(fcg) - (int,float32)
 ........Call - int
 ..........Identifier(fcb) - ()
@@ -272,7 +272,7 @@ Program
 ..........String
 ..........Identifier(safci)
 ....FuncBody
-......Call - float32
+......Call
 ........Identifier(fch) - (int,float32,string)
 ........Call - int
 ..........Identifier(fcg) - (int,float32)

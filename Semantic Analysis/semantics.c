@@ -94,6 +94,8 @@ int check_program(struct node *program){
             check_func_decl(cur_node);
         }
     }
+
+    print_unused_symbols();
     return semantic_errors;
 }
 
@@ -127,7 +129,7 @@ void check_func_decl(struct node *func_decl){
     }
 
     // Insert the function id in the global symbol table
-    insert_symbol(symbol_table, id->token, return_type, func_decl, 0);
+    insert_symbol(symbol_table, id->token, return_type, func_decl, 0, 1);
 
 
     // Create a new scope for the function
@@ -136,7 +138,8 @@ void check_func_decl(struct node *func_decl){
     new_scope->next = NULL;
 
     // Insert the return type in the new scope
-    insert_symbol(new_scope, "return", return_type, NULL, 0);
+    insert_symbol(new_scope, "return", return_type, NULL, 0, 1);
+
 
     // Add the new scope to the queue
     struct scopes_queue *new_queue_entry = malloc(sizeof(struct scopes_queue));
@@ -178,7 +181,7 @@ void check_parameters(struct node *func_params, struct symbol_list *scope){
         }
         enum category type_category = type->category;
         enum type var_type = category_to_type(type_category);
-        insert_symbol(scope, id->token, var_type, param_decl, 1);
+        insert_symbol(scope, id->token, var_type, param_decl, 1, 1);
     }
 
 }
@@ -296,7 +299,8 @@ enum type check_call(struct node *call_node, struct symbol_list *scope, int is_s
     enum type return_type;
     
     // Check if the function exists
-    if(search_symbol(symbol_table, id->token) == NULL){
+    struct symbol_list *func_symbol = search_symbol(symbol_table, id->token);
+    if(func_symbol == NULL){
         semantic_errors++;
         printf("Line %d, column %d: Cannot find symbol %s(%s)\n", id->token_line, id->token_column, id->token, call_args_types);
         return_type = undef;
@@ -339,10 +343,6 @@ void check_return(struct node *return_node, struct symbol_list *scope){
     }
 
     enum type declared_return_type = search_symbol(scope, "return")->type;
-    
-    if(declared_return_type == none){
-        return;
-    }
     if(return_type != declared_return_type){
         semantic_errors++;
         printf("Line %d, column %d: Incompatible type %s in return statement\n", return_expr->token_line, return_expr->token_column, type_name[return_type]);
@@ -444,6 +444,16 @@ void check_assign(struct node *assign, struct symbol_list *scope){
     else{
         assign->type = left_type;
     }
+
+    // Mark symbol as used
+    struct symbol_list *symbol;
+    if((symbol = search_symbol(scope, left->token)) != NULL){
+        symbol->was_used = 1;
+    }
+    else{
+        symbol = search_symbol(symbol_table, left->token);
+        symbol->was_used = 1;
+    }
 }
 
 enum type check_expression(struct node *expression, struct symbol_list *scope){
@@ -455,13 +465,16 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
     enum type expr_type;
     if(cat == Identifier){
         if(var_exists(expression, scope)){
-            if(search_symbol(scope, expression->token) != NULL){
-                expr_type = search_symbol(scope, expression->token)->type;
+            struct symbol_list *symbol;
+            if((symbol = search_symbol(scope, expression->token)) != NULL){
+                expr_type = symbol->type;
             }
-            // It's in the global scope
-            else{ 
-                expr_type = search_symbol(symbol_table, expression->token)->type;
+            else{
+                symbol = search_symbol(symbol_table, expression->token);
+                expr_type = symbol->type;
             }
+            // Mark symbol as used
+            symbol->was_used = 1;
         }
         else{
             expr_type = undef;
@@ -622,18 +635,18 @@ void check_var_decl(struct node *var_decl, struct symbol_list *scope){
     enum category type_category = type->category;
     enum type var_type = category_to_type(type_category);
 
-    insert_symbol(scope, id->token, var_type, var_decl, 0);
+    insert_symbol(scope, id->token, var_type, var_decl, 0, 0);
 }
 
 // insert a new symbol in the list, unless it is already there
-struct symbol_list *insert_symbol(struct symbol_list *table, char *identifier, enum type type, struct node *node, int is_parameter) {
+struct symbol_list *insert_symbol(struct symbol_list *table, char *identifier, enum type type, struct node *node, int is_parameter, int mark_as_used) {
     struct symbol_list *new = (struct symbol_list *) malloc(sizeof(struct symbol_list));
     new->identifier = strdup(identifier);
     new->type = type;
     new->node = node;
     new->next = NULL;
     new->is_parameter = is_parameter;
-    new->was_used = 0;
+    new->was_used = mark_as_used;
     struct symbol_list *symbol = table;
     while(symbol != NULL) {
         if(symbol->next == NULL) {
@@ -736,6 +749,32 @@ void show_symbol_scopes() {
             printf("\n");
         }
         printf("\n");
+        cur_scope = cur_scope->next;
+    }
+}
+
+// Function to print unused symbols
+void print_unused_symbols() {
+    struct symbol_list *symbol;
+    // for(symbol = symbol_table->next; symbol != NULL; symbol = symbol->next){
+    //     if(symbol->was_used == 0){
+    //         struct node *node = symbol->node;
+    //         struct node *id = get_child(node, 0);
+    //         printf("Line %d, column %d: Symbol %s was declared but never used", id->token_line, id->token_column, id->token);
+    //     }
+    // }
+    // Check symbols in function scopes
+    struct scopes_queue *cur_scope = symbol_scopes;
+    while (cur_scope != NULL) {
+        symbol = cur_scope->table->next;
+        while (symbol != NULL) {
+            if(symbol->was_used == 0 && !symbol->is_parameter){
+                struct node *node = symbol->node;
+                struct node *id = get_child(node, 1);
+                printf("Line %d, column %d: Symbol %s declared but never used\n", id->token_line, id->token_column, id->token);
+            }
+            symbol = symbol->next;
+        }
         cur_scope = cur_scope->next;
     }
 }

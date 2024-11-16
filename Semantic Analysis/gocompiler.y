@@ -84,8 +84,6 @@ Declarations        :   Declarations FuncDecl SEMICOLON
                             add_child($$, var_declarations);
                             add_child(var_declarations, $2);
 
-                            //add_child($$, $2);
-                            
                         }
                     |   
                         {
@@ -102,14 +100,10 @@ Declarations        :   Declarations FuncDecl SEMICOLON
 VarDecl             :   VAR VarSpec                                             
                         {
                             $$ = $2;
-                            //$$ = new_node(AUX, NULL);
-                            //add_child($$, $2);
                         }
                     |   VAR LPAR VarSpec SEMICOLON RPAR                         
                         {
                             $$ = $3;
-                            //$$ = new_node(AUX, NULL);
-                            //add_child($$, $3);
                         }
                     ;   
 
@@ -129,7 +123,6 @@ VarSpec             :   IDENTIFIER StarCommaId Type
                             if($2 != NULL){
                                 // First extra variable declaration ($2 is the AUX node)
                                 struct node_list *cur_var_decl = $2->children->next;
-                                //dfs(cur_var_decl->node, 0);
                                 while(cur_var_decl != NULL){
                                     struct node *type_node = new_node(type, NULL);
 
@@ -152,7 +145,6 @@ VarSpec             :   IDENTIFIER StarCommaId Type
                                     struct node *id_node = var_decl_node->children->next->node; // Identifier node
                                     char *var_name = strdup(id_node->token); // Identifier name
                                     
-                                    
                                     /*
                                         Add the type node before the adding the identifier node again
                                         The structure becomes as follows:
@@ -163,7 +155,13 @@ VarSpec             :   IDENTIFIER StarCommaId Type
                                         ..Id
                                     */
                                     add_child(cur_var_decl->node, type_node);
-                                    add_child(cur_var_decl->node, new_node(Identifier, var_name));
+
+                                    struct node *new_id_node = new_node(Identifier, var_name);
+
+                                    // Copy the line and column from the original identifier node
+                                    new_id_node->token_line = id_node->token_line;
+                                    new_id_node->token_column = id_node->token_column;
+                                    add_child(cur_var_decl->node, new_id_node);
 
                                     /*
                                         Remove the first node from the VarDecl node
@@ -184,6 +182,7 @@ StarCommaId         :   StarCommaId COMMA IDENTIFIER
                             add_child(new_decl, new_node(Identifier, $3));
                             add_child($$, new_decl);
 
+                            LOCATE(get_child(new_decl, 0), @3.first_line, @3.first_column);
                             // The type is added in the VarSpec rule
                         }
                     |   

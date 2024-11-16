@@ -301,7 +301,7 @@ Program
 ..........Identifier(a) - float32
 ......Assign - float32
 ........Identifier(a) - float32
-........IdentifFer(c) - float32
+........Identifier(c) - float32
 ......Assign - float32
 ........Identifier(d) - float32
 ........Add - float32
@@ -361,18 +361,18 @@ Program
 ........Gt - bool
 ..........Natural(1) - int
 ..........Natural(2) - int
-......Call - int
+......Call
 ........Identifier(sixFunc) - (int)
 ........Natural(1) - int
-......Call - string
+......Call
 ........Identifier(eightFunc) - (int,float32,string)
 ........Natural(1) - int
 ........Decimal(.1) - float32
 ........Identifier(stringThing) - string
-......Call - float32
+......Call
 ........Identifier(sevenFunc) - (int,float32)
 ........Natural(1) - int
 ........Decimal(.2) - float32
-......Call - int
+......Call
 ........Identifier(tenFunc) - (int)
 ........Natural(1) - int

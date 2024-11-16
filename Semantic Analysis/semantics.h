@@ -38,9 +38,10 @@ void check_for(struct node *for_node, struct symbol_list *scope);
 void check_return(struct node *return_node, struct symbol_list *scope);
 enum type check_expression(struct node *expression, struct symbol_list *scope);
 
+void print_unused_symbols();
 int var_exists(struct node *var, struct symbol_list *scope);
 
-struct symbol_list *insert_symbol(struct symbol_list *symbol_table, char *identifier, enum type type, struct node *node, int is_parameter);
+struct symbol_list *insert_symbol(struct symbol_list *symbol_table, char *identifier, enum type type, struct node *node, int is_parameter, int mark_as_used);
 struct symbol_list *search_symbol(struct symbol_list *symbol_table, char *identifier);
 char *get_func_parameter_types(char *function_name, struct scopes_queue *scope);
 void show_symbol_table();
