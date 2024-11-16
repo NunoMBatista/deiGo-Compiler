@@ -103,7 +103,7 @@ int check_program(struct node *program){
         cur_scope = cur_scope->next;
     }
 
-    
+
 
 
     print_unused_symbols();
@@ -607,7 +607,7 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
             expr_type = undef;
         }
         else{
-            expr_type = right_type;
+            expr_type = bool;
         }
         expression->type = expr_type;
         return expr_type;
