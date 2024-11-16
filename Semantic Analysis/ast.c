@@ -51,8 +51,8 @@ struct node *get_child(struct node *parent, int position) {
 }
 
 // Names defined in ast.h
-const char *category_name[] = names;
-const char *type_name[] = t_name;
+char *category_name[] = names;
+char *type_name[] = t_name;
 
 // Perform a depth-first search to print the AST
 void dfs(struct node *cur_node, int depth){
@@ -75,6 +75,9 @@ void dfs(struct node *cur_node, int depth){
     // Print the type (if it exists)
     if(cur_node->type != none){
         printf(" - %s", type_name[cur_node->type]);
+    }
+    if(cur_node->parameter_list != NULL){
+        printf(" - (%s)", cur_node->parameter_list);
     }
 
 

@@ -9,7 +9,7 @@ int semantic_errors = 0;
 struct symbol_list *symbol_table;
 struct scopes_queue *symbol_scopes;
 
-extern const char *type_name[];
+extern char *type_name[];
 
 enum type category_to_type(enum category category){
     switch(category){
@@ -22,6 +22,7 @@ enum type category_to_type(enum category category){
         case Bool:
             return bool;
         case String:
+        case StrLit:
             return string;
         default:
             return undef;
@@ -219,22 +220,104 @@ void check_statements(struct node *statement, struct symbol_list *scope){
     if(cur_category == Return){
         check_return(statement, scope);
     }
+    if(cur_category == Call){
+        check_call(statement, scope, 1);
+    }
+    if(cur_category == Block){
+        struct node_list *cur_child = statement->children;
+        while((cur_child = cur_child->next) != NULL){
+            struct node *cur_node = cur_child->node;
+            check_statements(cur_node, scope);
+        }
+    }
+}
+
+// Checks function calls both as statements and as expressions
+enum type check_call(struct node *call_node, struct symbol_list *scope, int is_statement){
+    if(call_node == NULL){
+        return undef;
+    }   
+
+    struct node *id = get_child(call_node, 0);
+    
+    char *call_args_types = (char *)malloc(4096);
+    call_args_types[0] = '\0';
+    // Create a string with the types of the arguments of the function call
+    struct node_list *cur_args_child = call_node->children->next;
+    while((cur_args_child = cur_args_child->next) != NULL){
+        struct node *arg = cur_args_child->node;
+        enum type arg_type = check_expression(arg, scope);
+        char *arg_type_str = type_name[arg_type];
+        strcat(call_args_types, arg_type_str);
+        strcat(call_args_types, ",");
+    }
+
+    // Remove the last comma
+    int len = strlen(call_args_types);
+    if (len > 0) {
+        call_args_types[len - 1] = '\0';
+    }
+
+
+    // Get the original function's parameters
+    char *func_params_types = get_func_parameter_types(id->token, NULL);
+
+    enum type return_type;
+    
+    // Check if the function exists
+    if(search_symbol(symbol_table, id->token) == NULL){
+        semantic_errors++;
+        printf("Line %d, column %d: Cannot find symbol %s(%s)\n", id->token_line, id->token_column, id->token, call_args_types);
+        return_type = undef;
+    }
+    else{
+        // Check if the function's parameters match the call's arguments
+        if(strcmp(func_params_types, call_args_types) != 0){
+            semantic_errors++;
+            printf("Line %d, column %d: Cannot find symbol %s(%s)\n", id->token_line, id->token_column, id->token, call_args_types);
+            return_type = undef;
+        }
+        // The function was correctly called
+        else{
+            return_type = search_symbol(symbol_table, id->token)->type;
+        }
+    }
+
+    // Annotate the AST
+    id->parameter_list = strdup(call_args_types);
+    if(!is_statement){
+        call_node->type = return_type;
+    }
+
+    return return_type;
 }
 
 void check_return(struct node *return_node, struct symbol_list *scope){
     if(return_node == NULL){
         return;
     }
-    struct node *return_expr = get_child(return_node, 0);
-    enum type return_type = check_expression(return_expr, scope);
 
+    struct node *return_expr = get_child(return_node, 0);
+    enum type return_type;
+    if(return_expr == NULL){
+        return_type = none;
+    }
+    else{
+        return_type = check_expression(return_expr, scope);
+    }
+    
     // Check if the type of the expression being returned is the same as the return type of the function
-    if(return_type != search_symbol(scope, "return")->type){
+    if(return_type == none && search_symbol(scope, "return")->type != none){
+        semantic_errors++;
+        printf("Line %d, column %d: Incompatible type none in return statement\n", return_expr->token_line, return_expr->token_column);
+    }
+    else if(return_type != none && return_type != search_symbol(scope, "return")->type){
         semantic_errors++;
         printf("Line %d, column %d: Incompatible type %s in return statement\n", return_expr->token_line, return_expr->token_column, type_name[return_type]);
     }
 }
 
+// Check the for statement
 void check_for(struct node *for_node, struct symbol_list *scope){
     if(for_node == NULL){
         return;
@@ -260,6 +343,7 @@ void check_for(struct node *for_node, struct symbol_list *scope){
 
 }
 
+// Check the if statement
 void check_if(struct node *if_node, struct symbol_list *scope){
     if(if_node == NULL){
         return;
@@ -283,9 +367,10 @@ void check_if(struct node *if_node, struct symbol_list *scope){
     if(else_block != NULL){
         check_statements(else_block, scope);
     }
-
 }
 
+
+// Check the assign statement
 void check_assign(struct node *assign, struct symbol_list *scope){
     if(assign == NULL){
         return;
@@ -350,21 +435,61 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
         expression->type = expr_type;
         return expr_type;
     }
-    if(cat == Or || cat == And || cat == Eq || cat == Ne || cat == Lt || cat == Gt || cat == Le || cat == Ge){
+
+    // Applies to integers, floats, strings and booleans
+    if(cat == Eq || cat == Ne){
         struct node *left = get_child(expression, 0);
         struct node *right = get_child(expression, 1);
         enum type left_type = check_expression(left, scope);
         enum type right_type = check_expression(right, scope);
-        
-        // == and != can compare booleans
-        if((left_type != right_type) || (left_type != integer && left_type != float32) || (right_type != integer && right_type != float32)){
-            if(cat == Eq || cat == Ne){
-                semantic_errors++;
-                printf("Line %d, column %d: Operator %s cannot be applied to types %s, %s\n", expression->token_line, expression->token_column, category_to_operator(expression->category), type_name[left_type], type_name[right_type]);
-            }
+        if(left_type != right_type || !(left_type == integer || left_type == float32 || left_type == string || left_type == bool)){
+            semantic_errors++;
+            printf("Line %d, column %d: Operator %s cannot be applied to types %s, %s\n",
+                   expression->token_line, expression->token_column,
+                   category_to_operator(expression->category),
+                   type_name[left_type], type_name[right_type]);
+            expr_type = undef;
+        } else {
+            expr_type = bool;
         }
-        
-        expr_type = bool;
+        expression->type = expr_type;
+        return expr_type;
+    }
+    // Only applies to integers and floats
+    if(cat == Lt || cat == Gt || cat == Le || cat == Ge){
+        struct node *left = get_child(expression, 0);
+        struct node *right = get_child(expression, 1);
+        enum type left_type = check_expression(left, scope);
+        enum type right_type = check_expression(right, scope);
+        if(left_type != right_type || !(left_type == integer || left_type == float32)){
+            semantic_errors++;
+            printf("Line %d, column %d: Operator %s cannot be applied to types %s, %s\n",
+                   expression->token_line, expression->token_column,
+                   category_to_operator(expression->category),
+                   type_name[left_type], type_name[right_type]);
+            expr_type = undef;
+        } else {
+            expr_type = bool;
+        }
+        expression->type = expr_type;
+        return expr_type;
+    }
+    // Only applies to booleans
+    if(cat == Or || cat == And){
+        struct node *left = get_child(expression, 0);
+        struct node *right = get_child(expression, 1);
+        enum type left_type = check_expression(left, scope);
+        enum type right_type = check_expression(right, scope);
+        if(left_type != bool || right_type != bool){
+            semantic_errors++;
+            printf("Line %d, column %d: Operator %s cannot be applied to types %s, %s\n",
+                   expression->token_line, expression->token_column,
+                   category_to_operator(expression->category),
+                   type_name[left_type], type_name[right_type]);
+            expr_type = undef;
+        } else {
+            expr_type = bool;
+        }
         expression->type = expr_type;
         return expr_type;
     }
@@ -380,6 +505,41 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
         }
         else{
             expr_type = left_type;
+        }
+        expression->type = expr_type;
+        return expr_type;
+    }
+    if(cat == Call){
+        expr_type = check_call(expression, scope, 0);
+        expression->type = expr_type;
+        return expr_type;
+    }
+    // Only applies to integers and floats
+    if(cat == Minus || cat == Plus){
+        struct node *right = get_child(expression, 0);
+        enum type right_type = check_expression(right, scope);
+        if(right_type != integer && right_type != float32){
+            semantic_errors++;
+            printf("Line %d, column %d: Operator - cannot be applied to type %s\n", expression->token_line, expression->token_column, type_name[right_type]);
+            expr_type = undef;
+        }
+        else{
+            expr_type = right_type;
+        }
+        expression->type = expr_type;
+        return expr_type;
+    }
+    // Only applies to integers
+    if(cat == Not){
+        struct node *right = get_child(expression, 0);
+        enum type right_type = check_expression(right, scope);
+        if(right_type != bool){
+            semantic_errors++;
+            printf("Line %d, column %d: Operator ! cannot be applied to type %s\n", expression->token_line, expression->token_column, type_name[right_type]);
+            expr_type = undef;
+        }
+        else{
+            expr_type = right_type;
         }
         expression->type = expr_type;
         return expr_type;
@@ -489,17 +649,17 @@ char *get_func_parameter_types(char *function_name, struct scopes_queue *scope) 
     while ((cur_symbol = cur_symbol->next) != NULL) {
         if (cur_symbol->is_parameter) {
             strcat(types, type_name[cur_symbol->type]);
-            strcat(types, ", ");
+            strcat(types, ",");
         } else {
             // Reached the end of the parameters
             break;
         }
     }
 
-    // Remove the last comma and space
-    size_t len = strlen(types);
-    if (len > 2) {
-        types[len - 2] = '\0';
+    // Remove the last comma
+    int len = strlen(types);
+    if (len > 0) {
+        types[len - 1] = '\0';
     }
 
     char *result = (char *)malloc(strlen(types) + 1);

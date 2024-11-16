@@ -589,24 +589,29 @@ Expr                :   Expr OR Expr
                         {
                             $$ = new_node(Minus, NULL);
                             add_child($$, $2);
+                            LOCATE($$, @1.first_line, @1.first_column);
                         }
                     |   NOT Expr                %prec NOT                       
                         {
                             $$ = new_node(Not, NULL);
                             add_child($$, $2);
+                            LOCATE($$, @1.first_line, @1.first_column);
                         }
                     |   PLUS Expr               %prec NOT                       
                         {
                             $$ = new_node(Plus, NULL);
                             add_child($$, $2);
+                            LOCATE($$, @1.first_line, @1.first_column);
                         }
                     |   NATURAL                                                 
                         {
                             $$ = new_node(Natural, $1);
+                            LOCATE($$, @1.first_line, @1.first_column);
                         }
                     |   DECIMAL                                                 
                         {
                             $$ = new_node(Decimal, $1);
+                            LOCATE($$, @1.first_line, @1.first_column);
                         }
                     |   IDENTIFIER                                              
                         {
@@ -617,10 +622,12 @@ Expr                :   Expr OR Expr
                     |   FuncInvocation                                          
                         {
                             $$ = $1;
+                            LOCATE($$, @1.first_line, @1.first_column);
                         }
                     |   LPAR Expr RPAR                                          
                         {
                             $$ = $2;
+                            
                         }
                     |   LPAR error RPAR                                         
                         {

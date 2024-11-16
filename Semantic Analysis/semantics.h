@@ -29,6 +29,7 @@ void check_parameters(struct node *func_params, struct symbol_list *scope);
 void check_func_body(struct node *func_body, struct symbol_list *scope);
 
 void check_statements(struct node *cur_node, struct symbol_list *scope);
+enum type check_call(struct node *call_node, struct symbol_list *scope, int is_statement);
 void check_assign(struct node *assign, struct symbol_list *scope);
 void check_if(struct node *if_node, struct symbol_list *scope);
 void check_for(struct node *for_node, struct symbol_list *scope);
