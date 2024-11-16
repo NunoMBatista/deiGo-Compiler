@@ -84,6 +84,7 @@ int check_program(struct node *program){
 
     struct node_list *cur_child = program->children;
 
+    // First pass: collect global variable and function declarations
     while((cur_child = cur_child->next) != NULL){
         struct node *cur_node = cur_child->node;
         enum category cur_category = cur_node->category;
@@ -91,10 +92,93 @@ int check_program(struct node *program){
             check_var_decl(cur_node, symbol_table);
         }
         if(cur_category == FuncDecl){
-            check_func_decl(cur_node);
+            add_func_to_symbol_table(cur_node);
+        }
+    }
+
+    // Second pass: process function bodies
+    cur_child = program->children;
+    while((cur_child = cur_child->next) != NULL){
+        struct node *cur_node = cur_child->node;
+        if(cur_node->category == FuncDecl){
+            process_func_body(cur_node);
         }
     }
     return semantic_errors;
+}
+
+void add_func_to_symbol_table(struct node *func_decl){
+    struct node *func_header = get_child(func_decl, 0);
+    struct node *id = get_child(func_header, 0);
+
+    if(search_symbol(symbol_table, id->token) != NULL){
+        semantic_errors++;
+        printf("Line %d, column %d: Symbol %s already defined\n", id->token_line, id->token_column, id->token);
+        return;
+    }
+
+    // Get the return type of the function
+    struct node *return_type_node = get_child(func_header, 1);
+
+    enum type return_type;
+    if(return_type_node->category == FuncParams){
+        return_type = none;
+    }
+    else{
+        return_type = category_to_type(return_type_node->category);
+    }
+
+    // Insert the function id in the global symbol table
+    insert_symbol(symbol_table, id->token, return_type, func_decl, 0);
+}
+
+void process_func_body(struct node *func_decl){
+    struct node *func_header = get_child(func_decl, 0);
+    struct node *id = get_child(func_header, 0);
+
+    // Get the return type from the symbol table
+    struct symbol_list *func_symbol = search_symbol(symbol_table, id->token);
+    enum type return_type = func_symbol->type;
+
+    // Get function parameters
+    struct node *return_type_node = get_child(func_header, 1);
+    struct node *func_params;
+    if(return_type_node->category == FuncParams){
+        func_params = return_type_node;
+    } else {
+        func_params = get_child(func_header, 2);
+    }
+
+    // Create a new scope for the function
+    struct symbol_list *new_scope = (struct symbol_list *) malloc(sizeof(struct symbol_list));
+    new_scope->identifier = strdup(id->token);
+    new_scope->next = NULL;
+
+    // Insert the return type in the new scope
+    insert_symbol(new_scope, "return", return_type, NULL, 0);
+
+    // Add the new scope to the queue
+    struct scopes_queue *new_queue_entry = malloc(sizeof(struct scopes_queue));
+    new_queue_entry->table = new_scope;
+    new_queue_entry->next = NULL;
+    new_queue_entry->identifier = strdup(id->token);
+
+    if (symbol_scopes == NULL) {
+        symbol_scopes = new_queue_entry;
+    } else {
+        struct scopes_queue *current = symbol_scopes;
+        while (current->next != NULL) {
+            current = current->next;
+        }
+        current->next = new_queue_entry;
+    }
+
+    // Check the function parameters
+    check_parameters(func_params, new_scope);
+
+    // Check the function body
+    struct node *func_body = get_child(func_decl, func_decl->children->next->next ? 2 : 1);
+    check_func_body(func_body, new_scope);
 }
 
 void check_func_decl(struct node *func_decl){
