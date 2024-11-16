@@ -10,6 +10,7 @@ struct symbol_list {
     int is_parameter;
     struct symbol_list *next;
     int was_used;
+    int is_function;
 };
 
 // Sequence of symbol lists
@@ -21,6 +22,12 @@ struct scopes_queue {
 
 enum type category_to_type(enum category category);
 
+// Global variables
+extern int program_errors;
+extern struct node *current_function; 
+extern int inside_loop;
+extern struct symbol_list *global_table;
+extern struct scopes_queue *scopes;
 
 int check_program(struct node *program);
 void check_var_decl(struct node *var_decl, struct symbol_list *scope);
@@ -41,7 +48,7 @@ enum type check_expression(struct node *expression, struct symbol_list *scope);
 void print_unused_symbols();
 int var_exists(struct node *var, struct symbol_list *scope);
 
-struct symbol_list *insert_symbol(struct symbol_list *symbol_table, char *identifier, enum type type, struct node *node, int is_parameter, int mark_as_used);
+struct symbol_list *insert_symbol(struct symbol_list *symbol_table, char *identifier, enum type type, struct node *node, int is_parameter, int mark_as_used, int is_function);
 struct symbol_list *search_symbol(struct symbol_list *symbol_table, char *identifier);
 char *get_func_parameter_types(char *function_name, struct scopes_queue *scope);
 void show_symbol_table();
