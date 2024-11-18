@@ -117,7 +117,7 @@ VarSpec             :   IDENTIFIER StarCommaId Type
                             add_child($$, new_decl);
                             add_child($$, $2);
 
-                            
+
                             enum category type = $3->category;
                             // Pass down the type to the extra variable declarations
                             if($2 != NULL){
@@ -284,7 +284,6 @@ FuncBody            :   LBRACE VarsAndStatements RBRACE
                             $$ = new_node(FuncBody, NULL);
                             //add_child($$, new_node(If, NULL));
                             add_child($$, $2);
-                        
                         }
                     ;
 
