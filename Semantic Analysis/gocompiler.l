@@ -323,14 +323,14 @@ int main(int argc, char **argv) {
                 // Check semantics
                 errors += check_program(program);
 
-                if(errors == 0){
+                //if(errors == 0){
                     // Print symbol tables 
                     show_symbol_table();
                     show_symbol_scopes();
                     
                     // Print annotated AST
                     dfs(program, 0);
-                }                
+                //}                
                                 
             }
         }

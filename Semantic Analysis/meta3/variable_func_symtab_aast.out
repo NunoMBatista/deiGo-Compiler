@@ -361,18 +361,18 @@ Program
 ........Gt - bool
 ..........Natural(1) - int
 ..........Natural(2) - int
-......Call
+......Call - int
 ........Identifier(sixFunc) - (int)
 ........Natural(1) - int
-......Call
+......Call - string
 ........Identifier(eightFunc) - (int,float32,string)
 ........Natural(1) - int
 ........Decimal(.1) - float32
 ........Identifier(stringThing) - string
-......Call
+......Call - float32
 ........Identifier(sevenFunc) - (int,float32)
 ........Natural(1) - int
 ........Decimal(.2) - float32
-......Call
+......Call - int
 ........Identifier(tenFunc) - (int)
 ........Natural(1) - int

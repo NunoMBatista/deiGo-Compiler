@@ -1,8 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 #include "ast.h"
 #include "semantics.h"
+
+#define MAX_ERRORS 4096
+#define MAX_ERROR_SIZE 4096
+char *error_messages[MAX_ERRORS];
+int error_count = 0;
 
 int semantic_errors = 0;
 
@@ -70,6 +76,24 @@ char *category_to_operator(enum category cat){
     }
 }
 
+void add_error(char *message) {
+    error_messages[error_count++] = strdup(message);
+}
+
+int compare_errors(const void *a, const void *b) {
+    char *error_a = *(char **)a;
+    char *error_b = *(char **)b;
+    return strcmp(error_a, error_b);
+}
+
+void sort_and_print_errors() {
+    qsort(error_messages, error_count, sizeof(char *), compare_errors);
+    for (int i = 0; i < error_count; i++) {
+        printf("%s", error_messages[i]);
+        free(error_messages[i]); 
+    }
+}
+
 int check_program(struct node *program){
     if(program == NULL){
         return 0;
@@ -103,10 +127,8 @@ int check_program(struct node *program){
         cur_scope = cur_scope->next;
     }
 
-
-
-
-    print_unused_symbols();
+    check_unused_symbols();
+    sort_and_print_errors();
     return semantic_errors;
 }
 
@@ -120,7 +142,9 @@ void check_func_decl(struct node *func_decl){
 
     if(search_symbol(symbol_table, id->token) != NULL){
         semantic_errors++;
-        printf("Line %d, column %d: Symbol %s already defined\n", id->token_line, id->token_column, id->token);
+        char buffer[MAX_ERROR_SIZE];
+        sprintf(buffer, "Line %d, column %d: Symbol %s already defined\n", id->token_line, id->token_column, id->token);
+        add_error(buffer);
         return;
     }
 
@@ -187,9 +211,11 @@ void check_parameters(struct node *func_params, struct symbol_list *scope){
         struct node *param_decl = cur_child->node;
         struct node *id = get_child(param_decl, 1);
         struct node *type = get_child(param_decl, 0);
-        if(search_symbol(symbol_table, id->token) != NULL){
+        if(search_symbol(scope, id->token) != NULL){
             semantic_errors++;
-            printf("Line %d, column %d: Symbol %s already defined\n", id->token_line, id->token_column, id->token);
+            char buffer[MAX_ERROR_SIZE];
+            sprintf(buffer, "Line %d, column %d: Symbol %s already defined\n", id->token_line, id->token_column, id->token);
+            add_error(buffer);
             return;
         }
         enum category type_category = type->category;
@@ -236,7 +262,7 @@ void check_statements(struct node *statement, struct symbol_list *scope){
         check_return(statement, scope);
     }
     if(cur_category == Call){
-        check_call(statement, scope, 1);
+        check_call(statement, scope);
     }
     if(cur_category == Block){
         struct node_list *cur_child = statement->children;
@@ -250,7 +276,9 @@ void check_statements(struct node *statement, struct symbol_list *scope){
         enum type right_type = check_expression(right, scope);
         if(right_type == undef){
             semantic_errors++;
-            printf("Line %d, column %d: Incompatible type %s in fmt.Println statement\n", right->token_line, right->token_column, type_name[right_type]);
+            char buffer[MAX_ERROR_SIZE];
+            sprintf(buffer, "Line %d, column %d: Incompatible type %s in fmt.Println statement\n", right->token_line, right->token_column, type_name[right_type]);
+            add_error(buffer);
         }
     }
 
@@ -272,16 +300,17 @@ void check_parse_args(struct node *parse_args, struct symbol_list *scope){
 
     if(right_type != integer || (left_type != integer && left_type != string)){
         semantic_errors++;
-        printf("Line %d, column %d: Operator strconv.Atoi cannot be applied to types %s, %s\n", parse_args->token_line, parse_args->token_column, type_name[right_type], type_name[left_type]);
+        char buffer[MAX_ERROR_SIZE];
+        sprintf(buffer, "Line %d, column %d: Operator strconv.Atoi cannot be applied to types %s, %s\n", parse_args->token_line, parse_args->token_column, type_name[right_type], type_name[left_type]);
+        add_error(buffer);
     }
 
     // Annotate the AST
     parse_args->type = left_type;
-
 }
 
 // Checks function calls both as statements and as expressions
-enum type check_call(struct node *call_node, struct symbol_list *scope, int is_statement){
+enum type check_call(struct node *call_node, struct symbol_list *scope){
     if(call_node == NULL){
         return undef;
     }   
@@ -308,21 +337,24 @@ enum type check_call(struct node *call_node, struct symbol_list *scope, int is_s
 
     // Get the original function's parameters
     char *func_params_types = get_func_parameter_types(id->token, NULL);
-
     enum type return_type;
     
     // Check if the function exists
     struct symbol_list *func_symbol = search_symbol(symbol_table, id->token);
     if(func_symbol == NULL){
         semantic_errors++;
-        printf("Line %d, column %d: Cannot find symbol %s(%s)\n", id->token_line, id->token_column, id->token, call_args_types);
+        char buffer[MAX_ERROR_SIZE];
+        sprintf(buffer, "Line %d, column %d: Cannot find symbol %s(%s)\n", id->token_line, id->token_column, id->token, call_args_types);
+        add_error(buffer);
         return_type = undef;
     }
     else{
         // Check if the function's parameters match the call's arguments
         if(strcmp(func_params_types, call_args_types) != 0){
             semantic_errors++;
-            printf("Line %d, column %d: Cannot find symbol %s(%s)\n", id->token_line, id->token_column, id->token, call_args_types);
+            char buffer[MAX_ERROR_SIZE];
+            sprintf(buffer, "Line %d, column %d: Cannot find symbol %s(%s)\n", id->token_line, id->token_column, id->token, call_args_types);
+            add_error(buffer);
             return_type = undef;
         }
         // The function was correctly called
@@ -333,9 +365,9 @@ enum type check_call(struct node *call_node, struct symbol_list *scope, int is_s
 
     // Annotate the AST
     id->parameter_list = strdup(call_args_types);
-    if(!is_statement){
+    //if(!is_statement){
         call_node->type = return_type;
-    }
+    //}
 
     return return_type;
 }
@@ -358,7 +390,9 @@ void check_return(struct node *return_node, struct symbol_list *scope){
     enum type declared_return_type = search_symbol(scope, "return")->type;
     if(return_type != declared_return_type){
         semantic_errors++;
-        printf("Line %d, column %d: Incompatible type %s in return statement\n", return_expr->token_line, return_expr->token_column, type_name[return_type]);
+        char buffer[MAX_ERROR_SIZE];
+        sprintf(buffer, "Line %d, column %d: Incompatible type %s in return statement\n", return_expr->token_line, return_expr->token_column, type_name[return_type]);
+        add_error(buffer);
     }
 }
 
@@ -386,7 +420,9 @@ void check_for(struct node *for_node, struct symbol_list *scope){
 
     if(expr_type != bool && expr_type != none && expr_type != undef){
         semantic_errors++;
-        printf("Line %d, column %d: Incompatible type %s in for statement\n", for_expr->token_line, for_expr->token_column, type_name[expr_type]);
+        char buffer[MAX_ERROR_SIZE];
+        sprintf(buffer, "Line %d, column %d: Incompatible type %s in for statement\n", for_expr->token_line, for_expr->token_column, type_name[expr_type]);
+        add_error(buffer);
     }
 
     if(for_block != NULL){
@@ -409,7 +445,9 @@ void check_if(struct node *if_node, struct symbol_list *scope){
     enum type expr_type = check_expression(condition_expr, scope);
     if(expr_type != bool){
         semantic_errors++;
-        printf("Line %d, column %d: Incompatible type %s in if statement\n", condition_expr->token_line, condition_expr->token_column, type_name[expr_type]);
+        char buffer[MAX_ERROR_SIZE];
+        sprintf(buffer, "Line %d, column %d: Incompatible type %s in if statement\n", condition_expr->token_line, condition_expr->token_column, type_name[expr_type]);
+        add_error(buffer);
     }
 
 
@@ -438,10 +476,11 @@ void check_assign(struct node *assign, struct symbol_list *scope){
     else{
         struct symbol_list *symbol;
         
-        // If it's not in the current scope, it must be in the global scope
+        // If it's in the current scope, use it's scope type
         if(search_symbol(scope, left->token) != NULL){
             symbol = search_symbol(scope, left->token);
         }
+        // If it's not in the current scope, use it's global scope type
         else{
             symbol = search_symbol(symbol_table, left->token);
         }
@@ -458,7 +497,9 @@ void check_assign(struct node *assign, struct symbol_list *scope){
 
     if((left_type != right_type) || (left_type == undef) || (right_type == undef)){
         semantic_errors++;
-        printf("Line %d, column %d: Operator = cannot be applied to types %s, %s\n", assign->token_line, assign->token_column, type_name[left_type], type_name[right_type]);
+        char buffer[MAX_ERROR_SIZE];
+        sprintf(buffer, "Line %d, column %d: Operator = cannot be applied to types %s, %s\n", assign->token_line, assign->token_column, type_name[left_type], type_name[right_type]);
+        add_error(buffer);
         assign->type = undef;
     }
     else{
@@ -478,9 +519,11 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
     if(cat == Identifier){
         if(var_exists(expression, scope)){
             struct symbol_list *symbol;
+            // If it's in the current scope, use it's scope type
             if((symbol = search_symbol(scope, expression->token)) != NULL){
                 expr_type = symbol->type;
             }
+            // If it's not in the current scope, use it's global scope type
             else{
                 symbol = search_symbol(symbol_table, expression->token);
                 expr_type = symbol->type;
@@ -513,10 +556,12 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
         enum type right_type = check_expression(right, scope);
         if(left_type != right_type || !(left_type == integer || left_type == float32 || left_type == string || left_type == bool)){
             semantic_errors++;
-            printf("Line %d, column %d: Operator %s cannot be applied to types %s, %s\n",
+            char buffer[MAX_ERROR_SIZE];
+            sprintf(buffer, "Line %d, column %d: Operator %s cannot be applied to types %s, %s\n",
                    expression->token_line, expression->token_column,
                    category_to_operator(expression->category),
                    type_name[left_type], type_name[right_type]);
+            add_error(buffer);
             expr_type = undef;
         }
 
@@ -532,10 +577,12 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
         enum type right_type = check_expression(right, scope);
         if(left_type != right_type || !(left_type == integer || left_type == float32)){
             semantic_errors++;
-            printf("Line %d, column %d: Operator %s cannot be applied to types %s, %s\n",
+            char buffer[MAX_ERROR_SIZE];
+            sprintf(buffer, "Line %d, column %d: Operator %s cannot be applied to types %s, %s\n",
                    expression->token_line, expression->token_column,
                    category_to_operator(expression->category),
                    type_name[left_type], type_name[right_type]);
+            add_error(buffer);
             expr_type = undef;
         }
 
@@ -551,10 +598,12 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
         enum type right_type = check_expression(right, scope);
         if(left_type != bool || right_type != bool){
             semantic_errors++;
-            printf("Line %d, column %d: Operator %s cannot be applied to types %s, %s\n",
+            char buffer[MAX_ERROR_SIZE];
+            sprintf(buffer, "Line %d, column %d: Operator %s cannot be applied to types %s, %s\n",
                    expression->token_line, expression->token_column,
                    category_to_operator(expression->category),
                    type_name[left_type], type_name[right_type]);
+            add_error(buffer);
         } 
 
         expr_type = bool;
@@ -568,7 +617,9 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
         enum type right_type = check_expression(right, scope);
         if((left_type != right_type) || (left_type != integer && left_type != float32) || (right_type != integer && right_type != float32)){
             semantic_errors++;
-            printf("Line %d, column %d: Operator %s cannot be applied to types %s, %s\n", expression->token_line, expression->token_column, category_to_operator(expression->category), type_name[left_type], type_name[right_type]);
+            char buffer[MAX_ERROR_SIZE];
+            sprintf(buffer, "Line %d, column %d: Operator %s cannot be applied to types %s, %s\n", expression->token_line, expression->token_column, category_to_operator(expression->category), type_name[left_type], type_name[right_type]);
+            add_error(buffer);
             expr_type = undef;
         }
         else{
@@ -578,7 +629,7 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
         return expr_type;
     }
     if(cat == Call){
-        expr_type = check_call(expression, scope, 0);
+        expr_type = check_call(expression, scope);
         expression->type = expr_type;
         return expr_type;
     }
@@ -588,7 +639,9 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
         enum type right_type = check_expression(right, scope);
         if(right_type != integer && right_type != float32){
             semantic_errors++;
-            printf("Line %d, column %d: Operator - cannot be applied to type %s\n", expression->token_line, expression->token_column, type_name[right_type]);
+            char buffer[MAX_ERROR_SIZE];
+            sprintf(buffer, "Line %d, column %d: Operator %s cannot be applied to type %s\n", expression->token_line, expression->token_column, category_to_operator(expression->category), type_name[right_type]);
+            add_error(buffer);
             expr_type = undef;
         }
         else{
@@ -597,13 +650,15 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
         expression->type = expr_type;
         return expr_type;
     }
-    // Only applies to integers
+    // Only applies to boolean
     if(cat == Not){
         struct node *right = get_child(expression, 0);
         enum type right_type = check_expression(right, scope);
         if(right_type != bool){
             semantic_errors++;
-            printf("Line %d, column %d: Operator ! cannot be applied to type %s\n", expression->token_line, expression->token_column, type_name[right_type]);
+            char buffer[MAX_ERROR_SIZE];
+            sprintf(buffer, "Line %d, column %d: Operator ! cannot be applied to type %s\n", expression->token_line, expression->token_column, type_name[right_type]);
+            add_error(buffer);
             expr_type = undef;
         }
         else{
@@ -626,7 +681,9 @@ int var_exists(struct node *var, struct symbol_list *scope){
          || ((search_symbol(symbol_table, var->token) != NULL && search_symbol(symbol_table, var->token)->is_function))
     ){
         semantic_errors++;
-        printf("Line %d, column %d: Cannot find symbol %s\n", var->token_line, var->token_column, var->token);
+        char buffer[MAX_ERROR_SIZE];
+        sprintf(buffer, "Line %d, column %d: Cannot find symbol %s\n", var->token_line, var->token_column, var->token);
+        add_error(buffer);
         return 0;
     }
 
@@ -646,7 +703,9 @@ void check_var_decl(struct node *var_decl, struct symbol_list *scope){
     // Check if the variable is already declared in the current scope or in the global scope
     if(search_symbol(scope, id->token) != NULL){
         semantic_errors++;
-        printf("Line %d, column %d: Symbol %s already defined\n", id->token_line, id->token_column, id->token);
+        char buffer[MAX_ERROR_SIZE];
+        sprintf(buffer, "Line %d, column %d: Symbol %s already defined\n", id->token_line, id->token_column, id->token);
+        add_error(buffer);
         return;
     }
 
@@ -773,7 +832,7 @@ void show_symbol_scopes() {
 }
 
 // Function to print unused symbols
-void print_unused_symbols() {
+void check_unused_symbols() {
     struct symbol_list *symbol;
     // Global variables can be unused
 
@@ -784,7 +843,9 @@ void print_unused_symbols() {
             if(symbol->was_used == 0 && !symbol->is_parameter){
                 struct node *node = symbol->node;
                 struct node *id = get_child(node, 1);
-                printf("Line %d, column %d: Symbol %s declared but never used\n", id->token_line, id->token_column, id->token);
+                char buffer[MAX_ERROR_SIZE];
+                sprintf(buffer, "Line %d, column %d: Symbol %s declared but never used\n", id->token_line, id->token_column, id->token);
+                add_error(buffer);
             }
             symbol = symbol->next;
         }

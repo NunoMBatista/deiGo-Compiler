@@ -3,6 +3,13 @@
 
 #include "ast.h"
 
+#define MAX_ERRORS 4096
+extern char *error_messages[MAX_ERRORS];
+extern int error_count;
+
+void add_error(char *message);
+void sort_and_print_errors();
+
 struct symbol_list {
     char *identifier;
     enum type type;
@@ -30,6 +37,10 @@ extern int inside_loop;
 extern struct symbol_list *global_table;
 extern struct scopes_queue *scopes;
 
+void add_error(char *message);
+int compare_errors(const void *a, const void *b);
+void sort_and_print_errors();
+
 int check_program(struct node *program);
 void check_var_decl(struct node *var_decl, struct symbol_list *scope);
 
@@ -39,14 +50,14 @@ void check_func_body(struct node *func_body, struct symbol_list *scope);
 void check_parse_args(struct node *parse_args, struct symbol_list *scope);
 
 void check_statements(struct node *cur_node, struct symbol_list *scope);
-enum type check_call(struct node *call_node, struct symbol_list *scope, int is_statement);
+enum type check_call(struct node *call_node, struct symbol_list *scope);
 void check_assign(struct node *assign, struct symbol_list *scope);
 void check_if(struct node *if_node, struct symbol_list *scope);
 void check_for(struct node *for_node, struct symbol_list *scope);
 void check_return(struct node *return_node, struct symbol_list *scope);
 enum type check_expression(struct node *expression, struct symbol_list *scope);
 
-void print_unused_symbols();
+void check_unused_symbols();
 int var_exists(struct node *var, struct symbol_list *scope);
 
 struct symbol_list *insert_symbol(struct symbol_list *symbol_table, char *identifier, enum type type, struct node *node, int is_parameter, int mark_as_used, int is_function);
