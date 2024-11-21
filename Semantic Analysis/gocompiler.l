@@ -322,15 +322,15 @@ int main(int argc, char **argv) {
             if(errors == 0) {
                 // Check semantics
                 errors += check_program(program);
+                /* if(errors > 0){
+                    printf("\n");
+                } */
 
-                //if(errors == 0){
-                    // Print symbol tables 
-                    show_symbol_table();
-                    show_symbol_scopes();
-                    
-                    // Print annotated AST
-                    dfs(program, 0);
-                //}                
+                show_symbol_table();
+                show_symbol_scopes();
+                
+                // Print annotated AST
+                dfs(program, 0);
                                 
             }
         }

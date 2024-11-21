@@ -262,7 +262,8 @@ void check_statements(struct node *statement, struct symbol_list *scope){
         check_return(statement, scope);
     }
     if(cur_category == Call){
-        check_call(statement, scope);
+        enum type call_type = check_call(statement, scope);
+        statement->type = call_type;
     }
     if(cur_category == Block){
         struct node_list *cur_child = statement->children;
@@ -365,9 +366,7 @@ enum type check_call(struct node *call_node, struct symbol_list *scope){
 
     // Annotate the AST
     id->parameter_list = strdup(call_args_types);
-    //if(!is_statement){
-        call_node->type = return_type;
-    //}
+    // call_node->type = return_type;
 
     return return_type;
 }
@@ -468,7 +467,7 @@ void check_assign(struct node *assign, struct symbol_list *scope){
     struct node *left = get_child(assign, 0);
     struct node *right = get_child(assign, 1);
 
-    enum type left_type;
+    enum type left_type = check_expression(left, scope);
     // Check if the variable exists
     if(!var_exists(left, scope)){
         left_type = undef;
@@ -513,12 +512,17 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
     if(expression == NULL){
         return undef;
     }
-
+    
     enum category cat = expression->category;
     enum type expr_type;
+    // If the expression can't be matched
+    expr_type = undef;
+    
     if(cat == Identifier){
         if(var_exists(expression, scope)){
             struct symbol_list *symbol;
+
+
             // If it's in the current scope, use it's scope type
             if((symbol = search_symbol(scope, expression->token)) != NULL){
                 expr_type = symbol->type;
@@ -528,6 +532,7 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
                 symbol = search_symbol(symbol_table, expression->token);
                 expr_type = symbol->type;
             }
+
             // Mark symbol as used
             symbol->was_used = 1;
         }
@@ -562,7 +567,6 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
                    category_to_operator(expression->category),
                    type_name[left_type], type_name[right_type]);
             add_error(buffer);
-            expr_type = undef;
         }
 
         expr_type = bool;
@@ -583,7 +587,6 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
                    category_to_operator(expression->category),
                    type_name[left_type], type_name[right_type]);
             add_error(buffer);
-            expr_type = undef;
         }
 
         expr_type = bool;
@@ -659,7 +662,7 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
             char buffer[MAX_ERROR_SIZE];
             sprintf(buffer, "Line %d, column %d: Operator ! cannot be applied to type %s\n", expression->token_line, expression->token_column, type_name[right_type]);
             add_error(buffer);
-            expr_type = undef;
+            expr_type = bool;
         }
         else{
             expr_type = bool;
@@ -669,15 +672,14 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
     }
 
 
-    // If the expression can't be matched
-    expr_type = undef;
+
     expression->type = expr_type;
     return expr_type;
 }
 
 int var_exists(struct node *var, struct symbol_list *scope){
     if(
-            ((search_symbol(scope, var->token) == NULL) && (search_symbol(symbol_table, var->token) == NULL) )
+            ((search_symbol(scope, var->token) == NULL) && (search_symbol(symbol_table, var->token) == NULL))
          || ((search_symbol(symbol_table, var->token) != NULL && search_symbol(symbol_table, var->token)->is_function))
     ){
         semantic_errors++;

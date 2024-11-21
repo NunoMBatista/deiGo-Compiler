@@ -1,0 +1,24 @@
+package main;
+
+func main() {
+    var a, b int;
+    var c, d float32;
+    var e bool;
+
+    // assign undef
+    c = a+b;
+
+    // ! can't be applied to b 
+    e = !b; 
+
+    // Fine
+    d = c+d;
+
+    // Fine
+    e = !g() + d + a;
+
+}
+
+func g() float32 {
+
+}
