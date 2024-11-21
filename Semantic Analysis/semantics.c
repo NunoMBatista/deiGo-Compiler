@@ -466,7 +466,7 @@ void check_assign(struct node *assign, struct symbol_list *scope){
     struct node *left = get_child(assign, 0);
     struct node *right = get_child(assign, 1);
 
-    enum type left_type = check_expression(left, scope);
+    enum type left_type;
     // Check if the variable exists
     if(!var_exists(left, scope)){
         left_type = undef;
