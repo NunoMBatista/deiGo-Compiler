@@ -468,7 +468,7 @@ void check_assign(struct node *assign, struct symbol_list *scope){
 
     enum type left_type = check_expression(left, scope);
     // Check if the variable exists
-    if(!var_exists(left, scope) && !var_exists(left, symbol_table)){
+    if(!var_exists(left, scope)){
         left_type = undef;
     }
     else{
@@ -520,7 +520,6 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
     if(cat == Identifier){
         if(var_exists(expression, scope)){
             struct symbol_list *symbol;
-
 
             // If it's in the current scope, use it's scope type
             if((symbol = search_symbol(scope, expression->token)) != NULL){

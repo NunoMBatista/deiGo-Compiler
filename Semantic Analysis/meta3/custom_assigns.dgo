@@ -1,22 +1,13 @@
 package main;
 
+var a int;
+
 func main() {
-    var a, b int;
+    var b int;
     var c, d float32;
     var e bool;
 
-    // assign undef
-    c = a+b;
-
-    // ! can't be applied to b 
-    e = !b; 
-
-    // Fine
-    d = c+d;
-
-    // Fine
-    e = !g() + d + a;
-
+    b = b+a;
 }
 
 func g() float32 {
