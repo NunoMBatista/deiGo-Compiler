@@ -222,7 +222,6 @@ void check_parameters(struct node *func_params, struct symbol_list *scope){
         enum type var_type = category_to_type(type_category);
         insert_symbol(scope, id->token, var_type, param_decl, 1, 1, 0);
     }
-
 }
 
 void check_func_body(struct node *func_body, struct symbol_list *scope){
@@ -469,12 +468,12 @@ void check_assign(struct node *assign, struct symbol_list *scope){
 
     enum type left_type = check_expression(left, scope);
     // Check if the variable exists
-    if(!var_exists(left, scope)){
+    if(!var_exists(left, scope) && !var_exists(left, symbol_table)){
         left_type = undef;
     }
     else{
         struct symbol_list *symbol;
-        
+
         // If it's in the current scope, use it's scope type
         if(search_symbol(scope, left->token) != NULL){
             symbol = search_symbol(scope, left->token);
@@ -671,8 +670,6 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
         return expr_type;
     }
 
-
-
     expression->type = expr_type;
     return expr_type;
 }
@@ -702,7 +699,7 @@ void check_var_decl(struct node *var_decl, struct symbol_list *scope){
     // The type is the first child of the VarDecl node
     struct node *type = get_child(var_decl, 0);
 
-    // Check if the variable is already declared in the current scope or in the global scope
+    // Check if the variable is already declared in the current scope
     if(search_symbol(scope, id->token) != NULL){
         semantic_errors++;
         char buffer[MAX_ERROR_SIZE];
