@@ -1,19 +1,13 @@
 package main; 
 
-var f0 int;
 func f0(){}
 
-func f0() int {}
-func f0(a int, b float32) {}
-
-var f0 float32;
-
-func main (){
+func main (f0 int, f0 float32, f0 int){
     var f0 float32;
     var a int;
 
-    var f0 int;
 
-    a = f0;
+    a = b;
 
+    var b int;
 }

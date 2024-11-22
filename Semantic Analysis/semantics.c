@@ -216,11 +216,12 @@ void check_parameters(struct node *func_params, struct symbol_list *scope){
             char buffer[MAX_ERROR_SIZE];
             sprintf(buffer, "Line %d, column %d: Symbol %s already defined\n", id->token_line, id->token_column, id->token);
             add_error(buffer);
-            return;
         }
-        enum category type_category = type->category;
-        enum type var_type = category_to_type(type_category);
-        insert_symbol(scope, id->token, var_type, param_decl, 1, 1, 0);
+        else{
+            enum category type_category = type->category;
+            enum type var_type = category_to_type(type_category);
+            insert_symbol(scope, id->token, var_type, param_decl, 1, 1, 0);
+        }
     }
 }
 
@@ -274,14 +275,13 @@ void check_statements(struct node *statement, struct symbol_list *scope){
     if(cur_category == Print){
         struct node *right = get_child(statement, 0);
         enum type right_type = check_expression(right, scope);
-        if(right_type == undef){
+        if(right_type == undef || right_type == none){
             semantic_errors++;
             char buffer[MAX_ERROR_SIZE];
             sprintf(buffer, "Line %d, column %d: Incompatible type %s in fmt.Println statement\n", right->token_line, right->token_column, type_name[right_type]);
             add_error(buffer);
         }
     }
-
     // Right must be int and left must be int or string
     if(cur_category == ParseArgs){
         check_parse_args(statement, scope);
@@ -298,7 +298,7 @@ void check_parse_args(struct node *parse_args, struct symbol_list *scope){
     enum type left_type = check_expression(left, scope);
     enum type right_type = check_expression(right, scope);
 
-    if(right_type != integer || (left_type != integer && left_type != string)){
+    if((right_type != integer) || (left_type != integer && left_type != string)){
         semantic_errors++;
         char buffer[MAX_ERROR_SIZE];
         sprintf(buffer, "Line %d, column %d: Operator strconv.Atoi cannot be applied to types %s, %s\n", parse_args->token_line, parse_args->token_column, type_name[right_type], type_name[left_type]);
@@ -359,7 +359,7 @@ enum type check_call(struct node *call_node, struct symbol_list *scope){
         }
         // The function was correctly called
         else{
-            return_type = search_symbol(symbol_table, id->token)->type;
+            return_type = func_symbol->type;
         }
     }
 
@@ -378,7 +378,6 @@ void check_return(struct node *return_node, struct symbol_list *scope){
     enum type return_type;
     if(return_expr == NULL){
         return_type = none;
-        return;
     }
     else{
         return_type = check_expression(return_expr, scope);
@@ -415,7 +414,7 @@ void check_for(struct node *for_node, struct symbol_list *scope){
         expr_type = check_expression(for_expr, scope);
     }
 
-    if(expr_type != bool && expr_type != none && expr_type != undef){
+    if((expr_type != bool && expr_type != none) || expr_type == undef){
         semantic_errors++;
         char buffer[MAX_ERROR_SIZE];
         sprintf(buffer, "Line %d, column %d: Incompatible type %s in for statement\n", for_expr->token_line, for_expr->token_column, type_name[expr_type]);
@@ -481,9 +480,9 @@ void check_assign(struct node *assign, struct symbol_list *scope){
         else{
             symbol = search_symbol(symbol_table, left->token);
         }
+
         // Annotate the AST
         left_type = symbol->type;
-        //left->type = left_type;
 
         // Mark symbol as used
         symbol->was_used = 1;
@@ -493,14 +492,15 @@ void check_assign(struct node *assign, struct symbol_list *scope){
     right->type = right_type;
     left->type = left_type;
 
-    if((left_type != right_type) || (left_type == undef) || (right_type == undef)){
+    if((left_type != right_type) || (left_type == undef) || (right_type == undef) || (right_type == none) || (left_type == none)){
         semantic_errors++;
         char buffer[MAX_ERROR_SIZE];
         sprintf(buffer, "Line %d, column %d: Operator = cannot be applied to types %s, %s\n", assign->token_line, assign->token_column, type_name[left_type], type_name[right_type]);
         add_error(buffer);
     }
-    assign->type = left_type;
 
+    // Annotate the AST
+    assign->type = left_type;
 }
 
 enum type check_expression(struct node *expression, struct symbol_list *scope){
@@ -511,7 +511,7 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
     enum category cat = expression->category;
     enum type expr_type;
     // If the expression can't be matched
-    expr_type = undef;
+    expr_type = none;
     
     if(cat == Identifier){
         if(var_exists(expression, scope)){
@@ -554,7 +554,7 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
         struct node *right = get_child(expression, 1);
         enum type left_type = check_expression(left, scope);
         enum type right_type = check_expression(right, scope);
-        if(left_type != right_type || !(left_type == integer || left_type == float32 || left_type == string || left_type == bool)){
+        if((left_type != right_type) || !(left_type == integer || left_type == float32 || left_type == string || left_type == bool)){
             semantic_errors++;
             char buffer[MAX_ERROR_SIZE];
             sprintf(buffer, "Line %d, column %d: Operator %s cannot be applied to types %s, %s\n",
@@ -568,13 +568,14 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
         expression->type = expr_type;
         return expr_type;
     }
-    // Only applies to integers and floats
+    // Only applies to integers and floats and always returns bool
     if(cat == Lt || cat == Gt || cat == Le || cat == Ge){
         struct node *left = get_child(expression, 0);
         struct node *right = get_child(expression, 1);
         enum type left_type = check_expression(left, scope);
         enum type right_type = check_expression(right, scope);
         if(left_type != right_type || !(left_type == integer || left_type == float32)){
+            
             semantic_errors++;
             char buffer[MAX_ERROR_SIZE];
             sprintf(buffer, "Line %d, column %d: Operator %s cannot be applied to types %s, %s\n",
@@ -608,12 +609,13 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
         expression->type = expr_type;
         return expr_type;
     }
+    // Applies to integers and floats
     if(cat == Add || cat == Sub || cat == Mul || cat == Div || cat == Mod){
         struct node *left = get_child(expression, 0);
         struct node *right = get_child(expression, 1);
         enum type left_type = check_expression(left, scope);
         enum type right_type = check_expression(right, scope);
-        if((left_type != right_type) || (left_type != integer && left_type != float32) || (right_type != integer && right_type != float32)){
+        if((left_type != right_type) || !(left_type == integer || left_type == float32)){
             semantic_errors++;
             char buffer[MAX_ERROR_SIZE];
             sprintf(buffer, "Line %d, column %d: Operator %s cannot be applied to types %s, %s\n", expression->token_line, expression->token_column, category_to_operator(expression->category), type_name[left_type], type_name[right_type]);
@@ -657,11 +659,8 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
             char buffer[MAX_ERROR_SIZE];
             sprintf(buffer, "Line %d, column %d: Operator ! cannot be applied to type %s\n", expression->token_line, expression->token_column, type_name[right_type]);
             add_error(buffer);
-            expr_type = bool;
         }
-        else{
-            expr_type = bool;
-        }
+        expr_type = bool;
         expression->type = expr_type;
         return expr_type;
     }
@@ -671,11 +670,6 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
 }
 
 int var_exists(struct node *var, struct symbol_list *scope){
-    // if(
-    //         ((search_symbol(scope, var->token) == NULL) && (search_symbol(symbol_table, var->token) == NULL))
-    //      || ((search_symbol(symbol_table, var->token) != NULL && search_symbol(symbol_table, var->token)->is_function))
-    // )
-
     // It does not exist in the current scope and it does not exist in the global scope or it exists in the global scope but it is a function
     if(
             ((search_symbol(scope, var->token) == NULL) && (search_symbol(symbol_table, var->token) == NULL))
