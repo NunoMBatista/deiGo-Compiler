@@ -59,6 +59,7 @@ enum type check_expression(struct node *expression, struct symbol_list *scope);
 
 void check_unused_symbols();
 int var_exists(struct node *var, struct symbol_list *scope);
+int func_exists(struct node *func);
 
 struct symbol_list *insert_symbol(struct symbol_list *symbol_table, char *identifier, enum type type, struct node *node, int is_parameter, int mark_as_used, int is_function);
 struct symbol_list *search_symbol(struct symbol_list *symbol_table, char *identifier);

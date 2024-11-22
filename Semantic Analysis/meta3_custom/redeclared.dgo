@@ -1,0 +1,19 @@
+package main; 
+
+var f0 int;
+func f0(){}
+
+func f0() int {}
+func f0(a int, b float32) {}
+
+var f0 float32;
+
+func main (){
+    var f0 float32;
+    var a int;
+
+    var f0 int;
+
+    a = f0;
+
+}

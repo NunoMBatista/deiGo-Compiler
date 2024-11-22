@@ -483,7 +483,7 @@ void check_assign(struct node *assign, struct symbol_list *scope){
         }
         // Annotate the AST
         left_type = symbol->type;
-        left->type = left_type;
+        //left->type = left_type;
 
         // Mark symbol as used
         symbol->was_used = 1;
@@ -491,6 +491,7 @@ void check_assign(struct node *assign, struct symbol_list *scope){
     
     enum type right_type = check_expression(right, scope);
     right->type = right_type;
+    left->type = left_type;
 
     if((left_type != right_type) || (left_type == undef) || (right_type == undef)){
         semantic_errors++;
@@ -499,13 +500,14 @@ void check_assign(struct node *assign, struct symbol_list *scope){
         add_error(buffer);
     }
     assign->type = left_type;
+
 }
 
 enum type check_expression(struct node *expression, struct symbol_list *scope){
     if(expression == NULL){
         return undef;
     }
-    
+
     enum category cat = expression->category;
     enum type expr_type;
     // If the expression can't be matched
@@ -532,6 +534,7 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
             expr_type = undef;
         }
         expression->type = expr_type;
+
         return expr_type;
     } 
     if(cat == Natural || cat == Decimal){
@@ -668,10 +671,17 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
 }
 
 int var_exists(struct node *var, struct symbol_list *scope){
+    // if(
+    //         ((search_symbol(scope, var->token) == NULL) && (search_symbol(symbol_table, var->token) == NULL))
+    //      || ((search_symbol(symbol_table, var->token) != NULL && search_symbol(symbol_table, var->token)->is_function))
+    // )
+
+    // It does not exist in the current scope and it does not exist in the global scope or it exists in the global scope but it is a function
     if(
             ((search_symbol(scope, var->token) == NULL) && (search_symbol(symbol_table, var->token) == NULL))
-         || ((search_symbol(symbol_table, var->token) != NULL && search_symbol(symbol_table, var->token)->is_function))
-    ){
+        ||  ((search_symbol(scope, var->token) == NULL) && ((search_symbol(symbol_table, var->token) != NULL && search_symbol(symbol_table, var->token)->is_function)))
+    )
+    {
         semantic_errors++;
         char buffer[MAX_ERROR_SIZE];
         sprintf(buffer, "Line %d, column %d: Cannot find symbol %s\n", var->token_line, var->token_column, var->token);
@@ -679,6 +689,17 @@ int var_exists(struct node *var, struct symbol_list *scope){
         return 0;
     }
 
+    return 1;
+}
+
+int func_exists(struct node *func){
+    if((search_symbol(symbol_table, func->token) == NULL) || (search_symbol(symbol_table, func->token)->is_function == 0)){
+        semantic_errors++;
+        char buffer[MAX_ERROR_SIZE];
+        sprintf(buffer, "Line %d, column %d: Cannot find symbol %s\n", func->token_line, func->token_column, func->token);
+        add_error(buffer);
+        return 0;
+    }
     return 1;
 }
 
@@ -701,6 +722,7 @@ void check_var_decl(struct node *var_decl, struct symbol_list *scope){
         return;
     }
 
+    
     // Insert the variable in the current scope
     enum category type_category = type->category;
     enum type var_type = category_to_type(type_category);
