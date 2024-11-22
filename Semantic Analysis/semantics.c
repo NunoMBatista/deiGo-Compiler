@@ -365,7 +365,6 @@ enum type check_call(struct node *call_node, struct symbol_list *scope){
 
     // Annotate the AST
     id->parameter_list = strdup(call_args_types);
-    // call_node->type = return_type;
 
     return return_type;
 }
@@ -498,13 +497,8 @@ void check_assign(struct node *assign, struct symbol_list *scope){
         char buffer[MAX_ERROR_SIZE];
         sprintf(buffer, "Line %d, column %d: Operator = cannot be applied to types %s, %s\n", assign->token_line, assign->token_column, type_name[left_type], type_name[right_type]);
         add_error(buffer);
-        assign->type = undef;
     }
-    else{
-        assign->type = left_type;
-    }
-
-
+    assign->type = left_type;
 }
 
 enum type check_expression(struct node *expression, struct symbol_list *scope){
