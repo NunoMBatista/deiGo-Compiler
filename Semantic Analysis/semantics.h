@@ -18,6 +18,7 @@ struct symbol_list {
     struct symbol_list *next;
     int was_used;
     int is_function;
+    char *function_parameters;
 };
 
 // Sequence of symbol lists
@@ -45,7 +46,7 @@ int check_program(struct node *program);
 void check_var_decl(struct node *var_decl, struct symbol_list *scope);
 
 void check_func_decl(struct node *func_decl);
-void check_parameters(struct node *func_params, struct symbol_list *scope);
+char* check_parameters(struct node *func_params, struct symbol_list *scope);
 void check_func_body(struct node *func_body, struct symbol_list *scope);
 void check_parse_args(struct node *parse_args, struct symbol_list *scope);
 
@@ -63,7 +64,7 @@ int func_exists(struct node *func);
 
 struct symbol_list *insert_symbol(struct symbol_list *symbol_table, char *identifier, enum type type, struct node *node, int is_parameter, int mark_as_used, int is_function);
 struct symbol_list *search_symbol(struct symbol_list *symbol_table, char *identifier);
-char *get_func_parameter_types(char *function_name, struct scopes_queue *scope);
+char *get_func_parameter_types(char *function_name);
 void show_symbol_table();
 void show_symbol_scopes();
 

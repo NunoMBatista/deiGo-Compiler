@@ -385,6 +385,8 @@ Statement           :   IDENTIFIER ASSIGN Expr
                         {
                             $$ = new_node(Return, NULL);
                             add_child($$, $2);
+
+                            LOCATE($$, @1.first_line, @1.first_column);
                         }
                     |   FuncInvocation                                          
                         {

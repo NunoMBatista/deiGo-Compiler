@@ -184,7 +184,8 @@ void check_func_decl(struct node *func_decl){
 
     if (symbol_scopes == NULL) {
         symbol_scopes = new_queue_entry;
-    } else {
+    } 
+    else {
         struct scopes_queue *current = symbol_scopes;
         while (current->next != NULL) {
             current = current->next;
@@ -193,20 +194,29 @@ void check_func_decl(struct node *func_decl){
     }
 
     // Check the function parameters
-    check_parameters(func_params, new_scope);
+    char *param_types = check_parameters(func_params, new_scope);
 
     struct node *func_body = get_child(func_decl, 1);
 
     // Store the function body in the scope queue
     new_queue_entry->func_body = func_body;
+
+    // Store the function parameters in the symbol table
+    struct symbol_list *func_symbol = search_symbol(symbol_table, id->token);
+    func_symbol->function_parameters = strdup(param_types);
 }
 
-void check_parameters(struct node *func_params, struct symbol_list *scope){
+// Return 1 if the parameters are correct, 0 otherwise 
+char* check_parameters(struct node *func_params, struct symbol_list *scope){
     if(func_params == NULL){
-        return;
+        return "";
     }
 
+    
+    int has_undefined = 0;
     struct node_list *cur_child = func_params->children;
+    
+    char *param_types = (char *)malloc(4096);
     while((cur_child = cur_child->next) != NULL){
         struct node *param_decl = cur_child->node;
         struct node *id = get_child(param_decl, 1);
@@ -216,13 +226,26 @@ void check_parameters(struct node *func_params, struct symbol_list *scope){
             char buffer[MAX_ERROR_SIZE];
             sprintf(buffer, "Line %d, column %d: Symbol %s already defined\n", id->token_line, id->token_column, id->token);
             add_error(buffer);
+            has_undefined++;
         }
         else{
             enum category type_category = type->category;
             enum type var_type = category_to_type(type_category);
             insert_symbol(scope, id->token, var_type, param_decl, 1, 1, 0);
         }
+        strcat(param_types, type_name[category_to_type(type->category)]);
+        strcat(param_types, ",");
+
+
     }
+
+    // Remove the last comma
+    int len = strlen(param_types);
+    if (len > 0) {
+        param_types[len - 1] = '\0';
+    }
+    
+    return param_types;
 }
 
 void check_func_body(struct node *func_body, struct symbol_list *scope){
@@ -336,7 +359,7 @@ enum type check_call(struct node *call_node, struct symbol_list *scope){
     }
 
     // Get the original function's parameters
-    char *func_params_types = get_func_parameter_types(id->token, NULL);
+    char *func_params_types = get_func_parameter_types(id->token);
     enum type return_type;
     
     // Check if the function exists
@@ -350,7 +373,7 @@ enum type check_call(struct node *call_node, struct symbol_list *scope){
     }
     else{
         // Check if the function's parameters match the call's arguments
-        if(strcmp(func_params_types, call_args_types) != 0){
+        if((func_symbol->is_function == 0) || (strcmp(func_params_types, call_args_types) != 0)){
             semantic_errors++;
             char buffer[MAX_ERROR_SIZE];
             sprintf(buffer, "Line %d, column %d: Cannot find symbol %s(%s)\n", id->token_line, id->token_column, id->token, call_args_types);
@@ -376,19 +399,29 @@ void check_return(struct node *return_node, struct symbol_list *scope){
 
     struct node *return_expr = get_child(return_node, 0);
     enum type return_type;
+    enum type declared_return_type = search_symbol(scope, "return")->type;
     if(return_expr == NULL){
         return_type = none;
+
+        if(declared_return_type != none){
+            semantic_errors++;
+            char buffer[MAX_ERROR_SIZE];
+            sprintf(buffer, "Line %d, column %d: Incompatible type void in return statement\n", return_node->token_line, return_node->token_column);
+            add_error(buffer);
+        }
+
     }
     else{
         return_type = check_expression(return_expr, scope);
-    }
+    
 
-    enum type declared_return_type = search_symbol(scope, "return")->type;
-    if(return_type != declared_return_type){
-        semantic_errors++;
-        char buffer[MAX_ERROR_SIZE];
-        sprintf(buffer, "Line %d, column %d: Incompatible type %s in return statement\n", return_expr->token_line, return_expr->token_column, type_name[return_type]);
-        add_error(buffer);
+        if(return_type != declared_return_type){
+            semantic_errors++;
+            char buffer[MAX_ERROR_SIZE];
+            sprintf(buffer, "Line %d, column %d: Incompatible type %s in return statement\n", return_expr->token_line, return_expr->token_column, type_name[return_type]);
+            add_error(buffer);
+        }
+
     }
 }
 
@@ -510,9 +543,9 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
 
     enum category cat = expression->category;
     enum type expr_type;
+
     // If the expression can't be matched
     expr_type = none;
-    
     if(cat == Identifier){
         if(var_exists(expression, scope)){
             struct symbol_list *symbol;
@@ -548,6 +581,8 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
         return expr_type;
     }
 
+    char *type_name_expr[] = t_name; 
+    type_name_expr[none] = "void";
     // Applies to integers, floats, strings and booleans
     if(cat == Eq || cat == Ne){
         struct node *left = get_child(expression, 0);
@@ -560,7 +595,7 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
             sprintf(buffer, "Line %d, column %d: Operator %s cannot be applied to types %s, %s\n",
                    expression->token_line, expression->token_column,
                    category_to_operator(expression->category),
-                   type_name[left_type], type_name[right_type]);
+                   type_name_expr[left_type], type_name_expr[right_type]);
             add_error(buffer);
         }
 
@@ -581,7 +616,7 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
             sprintf(buffer, "Line %d, column %d: Operator %s cannot be applied to types %s, %s\n",
                    expression->token_line, expression->token_column,
                    category_to_operator(expression->category),
-                   type_name[left_type], type_name[right_type]);
+                   type_name_expr[left_type], type_name_expr[right_type]);
             add_error(buffer);
         }
 
@@ -601,7 +636,7 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
             sprintf(buffer, "Line %d, column %d: Operator %s cannot be applied to types %s, %s\n",
                    expression->token_line, expression->token_column,
                    category_to_operator(expression->category),
-                   type_name[left_type], type_name[right_type]);
+                   type_name_expr[left_type], type_name_expr[right_type]);
             add_error(buffer);
         } 
 
@@ -733,6 +768,11 @@ struct symbol_list *insert_symbol(struct symbol_list *table, char *identifier, e
     new->is_parameter = is_parameter;
     new->was_used = mark_as_used;
     new->is_function = is_function;
+    new->function_parameters = NULL;
+    if(is_function){
+        new->function_parameters = (char *)malloc(4096);
+    }
+
     struct symbol_list *symbol = table;
     while(symbol != NULL) {
         if(symbol->next == NULL) {
@@ -756,52 +796,62 @@ struct symbol_list *search_symbol(struct symbol_list *table, char *identifier) {
     return NULL;
 }
 
-char *get_func_parameter_types(char *function_name, struct scopes_queue *scope) {
-    char types[4096];
-    types[0] = '\0';
+char *get_func_parameter_types(char *function_name) {
+    // char types[4096];
+    // types[0] = '\0';
 
-    struct scopes_queue *cur_scope = symbol_scopes;
-    // If a scope is provided, there is no need to search for the function's scope
-    if(scope != NULL){
-        cur_scope = scope;
-    }
-    else{
-        // Find the function's scope
-        while (cur_scope != NULL) {
-            // Found the function's scope
-            if (strcmp(cur_scope->identifier, function_name) == 0) {
-                break;
-            }
-            cur_scope = cur_scope->next;
-        }
-        if (cur_scope == NULL) {
-            // Empty string
-            char *result = (char *)malloc(1);
-            result[0] = '\0';
-            return result;
-        }
-    }
+    // struct scopes_queue *cur_scope = symbol_scopes;
+    // // If a scope is provided, there is no need to search for the function's scope
+    // if(scope != NULL){
+    //     cur_scope = scope;
+    // }
+    // else{
+    //     // Find the function's scope
+    //     while (cur_scope != NULL) {
+    //         // Found the function's scope
+    //         if (strcmp(cur_scope->identifier, function_name) == 0) {
+    //             break;
+    //         }
+    //         cur_scope = cur_scope->next;
+    //     }
+    //     if (cur_scope == NULL) {
+    //         // Empty string
+    //         char *result = (char *)malloc(1);
+    //         result[0] = '\0';
+    //         return result;
+    //     }
+    // }
 
-    // Start after the return type (first symbol)
-    struct symbol_list *cur_symbol = cur_scope->table->next;
-    while ((cur_symbol = cur_symbol->next) != NULL) {
-        if (cur_symbol->is_parameter) {
-            strcat(types, type_name[cur_symbol->type]);
-            strcat(types, ",");
-        } else {
-            // Reached the end of the parameters
-            break;
-        }
-    }
+    // // Start after the return type (first symbol)
+    // struct symbol_list *cur_symbol = cur_scope->table->next;
+    // while ((cur_symbol = cur_symbol->next) != NULL) {
+    //     if (cur_symbol->is_parameter) {
+    //         strcat(types, type_name[cur_symbol->type]);
+    //         strcat(types, ",");
+    //     } else {
+    //         // Reached the end of the parameters
+    //         break;
+    //     }
+    // }
 
-    // Remove the last comma
-    int len = strlen(types);
-    if (len > 0) {
-        types[len - 1] = '\0';
-    }
+    // // Remove the last comma
+    // int len = strlen(types);
+    // if (len > 0) {
+    //     types[len - 1] = '\0';
+    // }
 
-    char *result = (char *)malloc(strlen(types) + 1);
-    strcpy(result, types);
+    // char *result = (char *)malloc(strlen(types) + 1);
+    // strcpy(result, types);
+    // return result;
+    struct symbol_list *symbol = search_symbol(symbol_table, function_name);
+    if(symbol == NULL){
+        return "";
+    }
+    if(symbol->function_parameters == NULL){
+        return "";
+    }
+    char *result = (char *)malloc(4096);
+    strcpy(result, symbol->function_parameters);
     return result;
 }
 
@@ -810,7 +860,7 @@ void show_symbol_table() {
     struct symbol_list *symbol;
     for(symbol = symbol_table->next; symbol != NULL; symbol = symbol->next){
         if(symbol->node->category == FuncDecl){
-            printf("%s\t(%s)\t%s\n", symbol->identifier, get_func_parameter_types(symbol->identifier, NULL), type_name[symbol->type]);
+            printf("%s\t(%s)\t%s\n", symbol->identifier, get_func_parameter_types(symbol->identifier), type_name[symbol->type]);
         }
         if(symbol->node->category == VarDecl){
             printf("%s\t\t%s\n", symbol->identifier, type_name[symbol->type]);
@@ -825,7 +875,7 @@ void show_symbol_scopes() {
     struct scopes_queue *cur_scope = symbol_scopes;
     while (cur_scope != NULL) {
         printf("===== Function %s(%s) Symbol Table =====\n",
-               cur_scope->identifier, get_func_parameter_types(NULL, cur_scope));
+               cur_scope->identifier, get_func_parameter_types(cur_scope->identifier));
         struct symbol_list *cur_symbol = cur_scope->table;
         while ((cur_symbol = cur_symbol->next) != NULL) {
             printf("%s\t\t%s", cur_symbol->identifier, type_name[cur_symbol->type]);
