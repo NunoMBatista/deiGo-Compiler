@@ -776,11 +776,11 @@ struct symbol_list *insert_symbol(struct symbol_list *table, char *identifier, e
     struct symbol_list *symbol = table;
     while(symbol != NULL) {
         if(symbol->next == NULL) {
-            symbol->next = new;    /* insert new symbol at the tail of the list */
+            symbol->next = new;    // insert new symbol at the tail of the list
             break;
         } else if(strcmp(symbol->next->identifier, identifier) == 0) {
             free(new);
-            return NULL;           /* return NULL if symbol is already inserted */
+            return NULL;           // return NULL if symbol is already inserted
         }
         symbol = symbol->next;
     }
