@@ -77,7 +77,12 @@ void dfs(struct node *cur_node, int depth){
         printf(" - %s", type_name[cur_node->type]);
     }
     if(cur_node->parameter_list != NULL){
-        printf(" - (%s)", cur_node->parameter_list);
+        if(strcmp(cur_node->parameter_list, "undef") == 0){
+            printf(" - undef");
+        }
+        else{
+           printf(" - (%s)", cur_node->parameter_list);
+        }
     }
 
 

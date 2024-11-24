@@ -3,11 +3,10 @@ package main;
 func f0(){}
 
 func main (f0 int, f0 float32, f0 int){
-    var f0 float32;
     var a int;
+    a = a+f0();
+    a = f0();
 
+    fmt.Println(f0());
 
-    a = b;
-
-    var b int;
 }
