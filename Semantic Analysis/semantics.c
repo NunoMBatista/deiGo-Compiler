@@ -17,7 +17,7 @@ struct scopes_queue *symbol_scopes;
 
 
 extern char *type_name[];
-char *type_name_stat[] = t_name; 
+char *type_name_stat[] = t_name;
 
 enum type category_to_type(enum category category){
     switch(category){
@@ -91,7 +91,7 @@ void sort_and_print_errors() {
     qsort(error_messages, error_count, sizeof(char *), compare_errors);
     for (int i = 0; i < error_count; i++) {
         printf("%s", error_messages[i]);
-        free(error_messages[i]); 
+        free(error_messages[i]);
     }
 }
 
@@ -185,7 +185,7 @@ void check_func_decl(struct node *func_decl){
 
     if (symbol_scopes == NULL) {
         symbol_scopes = new_queue_entry;
-    } 
+    }
     else {
         struct scopes_queue *current = symbol_scopes;
         while (current->next != NULL) {
@@ -207,16 +207,16 @@ void check_func_decl(struct node *func_decl){
     func_symbol->function_parameters = strdup(param_types);
 }
 
-// Return 1 if the parameters are correct, 0 otherwise 
+// Return 1 if the parameters are correct, 0 otherwise
 char* check_parameters(struct node *func_params, struct symbol_list *scope){
     if(func_params == NULL){
         return "";
     }
 
-    
+
     int has_undefined = 0;
     struct node_list *cur_child = func_params->children;
-    
+
     char *param_types = (char *)malloc(4096);
     while((cur_child = cur_child->next) != NULL){
         struct node *param_decl = cur_child->node;
@@ -245,7 +245,7 @@ char* check_parameters(struct node *func_params, struct symbol_list *scope){
     if (len > 0) {
         param_types[len - 1] = '\0';
     }
-    
+
     return param_types;
 }
 
@@ -262,7 +262,7 @@ void check_func_body(struct node *func_body, struct symbol_list *scope){
             check_var_decl(cur_node, scope);
         }
         else{
-            check_statements(cur_node, scope);    
+            check_statements(cur_node, scope);
         }
     }
 }
@@ -319,7 +319,7 @@ void check_parse_args(struct node *parse_args, struct symbol_list *scope){
     }
     struct node *right = get_child(parse_args, 0);
     struct node *left = get_child(parse_args, 1);
-    
+
     enum type left_type = check_expression(left, scope);
     enum type right_type = check_expression(right, scope);
 
@@ -338,10 +338,10 @@ void check_parse_args(struct node *parse_args, struct symbol_list *scope){
 enum type check_call(struct node *call_node, struct symbol_list *scope){
     if(call_node == NULL){
         return undef;
-    }   
+    }
 
     struct node *id = get_child(call_node, 0);
-    
+
     int correclty_called = 1;
     char *call_args_types = (char *)malloc(4096);
     call_args_types[0] = '\0';
@@ -364,7 +364,7 @@ enum type check_call(struct node *call_node, struct symbol_list *scope){
     // Get the original function's parameters
     char *func_params_types = get_func_parameter_types(id->token);
     enum type return_type;
-    
+
     // Check if the function exists
     struct symbol_list *func_symbol = search_symbol(symbol_table, id->token);
     if(func_symbol == NULL){
@@ -423,7 +423,7 @@ void check_return(struct node *return_node, struct symbol_list *scope){
     }
     else{
         return_type = check_expression(return_expr, scope);
-    
+
 
         if(return_type != declared_return_type){
             semantic_errors++;
@@ -452,7 +452,7 @@ void check_for(struct node *for_node, struct symbol_list *scope){
     }
 
     enum type expr_type = none;
-    
+
     if(for_expr != NULL){
         expr_type = check_expression(for_expr, scope);
     }
@@ -475,11 +475,11 @@ void check_if(struct node *if_node, struct symbol_list *scope){
     if(if_node == NULL){
         return;
     }
-    
+
     struct node *condition_expr = get_child(if_node, 0);
     struct node *if_block = get_child(if_node, 1);
     struct node *else_block = get_child(if_node, 2);
-    
+
     // Check if the condition expression is a boolean
     enum type expr_type = check_expression(condition_expr, scope);
     if(expr_type != bool){
@@ -530,7 +530,7 @@ void check_assign(struct node *assign, struct symbol_list *scope){
         // Mark symbol as used
         symbol->was_used = 1;
     }
-    
+
     enum type right_type = check_expression(right, scope);
     right->type = right_type;
     left->type = left_type;
@@ -579,7 +579,7 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
         expression->type = expr_type;
 
         return expr_type;
-    } 
+    }
     if(cat == Natural || cat == Decimal){
         expr_type = category_to_type(cat);
         expression->type = expr_type;
@@ -591,7 +591,7 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
         return expr_type;
     }
 
-    char *type_name_expr[] = t_name; 
+    char *type_name_expr[] = t_name;
     type_name_expr[none] = "void";
     // Applies to integers, floats, strings and booleans
     if(cat == Eq || cat == Ne){
@@ -620,7 +620,7 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
         enum type left_type = check_expression(left, scope);
         enum type right_type = check_expression(right, scope);
         if(left_type != right_type || !(left_type == integer || left_type == float32)){
-            
+
             semantic_errors++;
             char buffer[MAX_ERROR_SIZE];
             sprintf(buffer, "Line %d, column %d: Operator %s cannot be applied to types %s, %s\n",
@@ -648,7 +648,7 @@ enum type check_expression(struct node *expression, struct symbol_list *scope){
                    category_to_operator(expression->category),
                    type_name_expr[left_type], type_name_expr[right_type]);
             add_error(buffer);
-        } 
+        }
 
         expr_type = bool;
         expression->type = expr_type;
@@ -761,7 +761,7 @@ void check_var_decl(struct node *var_decl, struct symbol_list *scope){
         return;
     }
 
-    
+
     // Insert the variable in the current scope
     enum category type_category = type->category;
     enum type var_type = category_to_type(type_category);
@@ -918,5 +918,25 @@ void check_unused_symbols() {
             symbol = symbol->next;
         }
         cur_scope = cur_scope->next;
+    }
+}
+
+void free_symbol_table(struct symbol_list *table) {
+    struct symbol_list *symbol = table;
+    while(symbol != NULL) {
+        struct symbol_list *next = symbol->next;
+        free(symbol);
+        symbol = next;
+    }
+}
+
+void free_symbol_scopes() {
+    struct scopes_queue *cur_scope = symbol_scopes;
+    while (cur_scope != NULL) {
+        struct scopes_queue *next = cur_scope->next;
+        free_symbol_table(cur_scope->table);
+        free(cur_scope->identifier);
+        free(cur_scope);
+        cur_scope = next;
     }
 }

@@ -13,7 +13,7 @@ void sort_and_print_errors();
 struct symbol_list {
     char *identifier;
     enum type type;
-    struct node *node; 
+    struct node *node;
     int is_parameter;
     struct symbol_list *next;
     int was_used;
@@ -33,7 +33,7 @@ enum type category_to_type(enum category category);
 
 // Global variables
 extern int program_errors;
-extern struct node *current_function; 
+extern struct node *current_function;
 extern int inside_loop;
 extern struct symbol_list *global_table;
 extern struct scopes_queue *scopes;
@@ -67,5 +67,8 @@ struct symbol_list *search_symbol(struct symbol_list *symbol_table, char *identi
 char *get_func_parameter_types(char *function_name);
 void show_symbol_table();
 void show_symbol_scopes();
+void free_symbol_table(struct symbol_list *symbol_table);
+void free_symbol_scopes();
+
 
 #endif

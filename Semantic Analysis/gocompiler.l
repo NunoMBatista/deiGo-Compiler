@@ -23,23 +23,23 @@
         syn_col = yylloc.first_column = lex_col; \
         lex_col += yyleng;
 
-    
-    #define PASS_TOKEN() yylval.lexeme = strdup(yytext); 
-        
+
+    #define PASS_TOKEN() yylval.lexeme = strdup(yytext);
+
     int yyparse(void);
     void yyerror(char*);
-    int errors = 0; 
-        
+    int errors = 0;
+
     int lex_only = 0;
 
     // Lexical analyser current line and column
     int lex_line = 1, lex_col = 1;
 
     // Syntax analyser current line and column
-    int syn_col = -1, syn_line = -1; 
+    int syn_col = -1, syn_line = -1;
 
     // Flag to add semicolon after certain tokens
-    int add_semicolon = 0; 
+    int add_semicolon = 0;
 
     // Multi-line comment start line and column
     int ml_comment_start_line = 0;
@@ -72,6 +72,9 @@
         str_buffer_index = 0;
         str_buffer[0] = '\0';
     }
+
+    extern struct symbol_list *symbol_table;
+    extern struct scopes_queue *symbol_scopes;
 
 %}
 
@@ -162,13 +165,13 @@ QUOTE                               \"
 <STRING_LITERAL>{STRLIT}            { add_str_buffer(yytext, yyleng); }
 <STRING_LITERAL>\\(.?)              { printf("Line %d, column %d: invalid escape sequence (%s)\n", str_start_line, lex_col - yyleng, yytext); str_error = 1; str_buffer_index += yyleng; /*BEGIN(INITIAL); reset_str_buffer();*/ }
 <STRING_LITERAL>{NEWLINE}           { printf("Line %d, column %d: unterminated string literal\n", str_start_line, str_start_col); BEGIN(INITIAL); lex_line++; syn_line++; syn_col = 1; lex_col = 1; reset_str_buffer(); add_semicolon = 0; }
-<STRING_LITERAL>{QUOTE}             { 
-                                        add_str_buffer(yytext, yyleng); 
+<STRING_LITERAL>{QUOTE}             {
+                                        add_str_buffer(yytext, yyleng);
                                         str_buffer[str_buffer_index] = '\0';
-                                        
+
                                         if(!str_error){
                                             if(lex_only){
-                                                printf("STRLIT(%s)\n", str_buffer); 
+                                                printf("STRLIT(%s)\n", str_buffer);
                                             }
                                             else{
                                                 // Store the string literal in the lexeme field
@@ -176,17 +179,17 @@ QUOTE                               \"
 
                                                 // Reset and change state before returning token
                                                 reset_str_buffer();
-                                                BEGIN(INITIAL); 
+                                                BEGIN(INITIAL);
                                                 return STRLIT;
-                                            }  
-                                            add_semicolon = 1; 
+                                            }
+                                            add_semicolon = 1;
                                         }
                                         else{
                                             add_semicolon = 0;
                                         }
 
                                         reset_str_buffer();
-                                        BEGIN(INITIAL); 
+                                        BEGIN(INITIAL);
                                     }
 
 
@@ -242,21 +245,21 @@ QUOTE                               \"
 
 {DECIMAL}                           { if(lex_only) printf("DECIMAL(%s)\n", yytext);     add_semicolon = 1;          if(!lex_only) { PASS_TOKEN(); return DECIMAL; } }
 
-{NEWLINE}                           { 
-                                        lex_line++; /*syn_line++; syn_col = 1;*/  lex_col = 1; 
+{NEWLINE}                           {
+                                        lex_line++; /*syn_line++; syn_col = 1;*/  lex_col = 1;
 
-                                        if(add_semicolon) { 
-                                            add_semicolon = 0; 
+                                        if(add_semicolon) {
+                                            add_semicolon = 0;
                                             if(lex_only == 1) {
                                                 printf("SEMICOLON\n");
                                             }
                                             if(lex_only == 0) {
-                                                return SEMICOLON; 
-                                            } 
+                                                return SEMICOLON;
+                                            }
                                         }
                                     }
 
-<<EOF>>                             { 
+<<EOF>>                             {
                                         YY_USER_ACTION;
                                         lex_col--;
 
@@ -266,19 +269,19 @@ QUOTE                               \"
 
                                         if(add_semicolon) {
                                             if(lex_only == 1){
-                                                printf("SEMICOLON\n"); 
+                                                printf("SEMICOLON\n");
                                             }
                                             if(lex_only == 0) {
                                                 return_eof = 1;
                                                 return SEMICOLON;
-                                            } 
-                                            
-                                            add_semicolon = 0; 
-                                        };      
+                                            }
+
+                                            add_semicolon = 0;
+                                        };
                                         return_eof = 1;
                                     }
 
-.                                   { printf("Line %d, column %d: illegal character (%s)\n", lex_line, lex_col - yyleng, yytext); } 
+.                                   { printf("Line %d, column %d: illegal character (%s)\n", lex_line, lex_col - yyleng, yytext); }
 
 %%
 
@@ -318,7 +321,7 @@ int main(int argc, char **argv) {
         if(strcmp(argv[1], "-s") == 0) {
             yyparse(); /* run the syntax analysis automaton */
             remove_aux(program);
-            
+
             if(errors == 0) {
                 // Check semantics
                 errors += check_program(program);
@@ -328,25 +331,38 @@ int main(int argc, char **argv) {
 
                 show_symbol_table();
                 show_symbol_scopes();
-                
+
                 // Print annotated AST
                 dfs(program, 0);
-                                
+
             }
         }
     }
     else{
-        yyparse(); 
+        yyparse();
         remove_aux(program);
         if(errors == 0) {
             errors += check_program(program);
         }
     }
-    
+
+    // Free AST
     if(program != NULL){
-        free_ast(program); // Free AST
+        free_ast(program);
     }
-    yylex_destroy(); // Free lexer
+
+    // Free symbol table
+    if(symbol_table != NULL){
+        free_symbol_table(symbol_table);
+    }
+
+    // Free scopes queue
+    if(symbol_scopes != NULL){
+        free_symbol_scopes();
+    }
+
+    // Free lexer
+    yylex_destroy();
 
     return 0;
 }
