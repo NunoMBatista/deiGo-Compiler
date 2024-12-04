@@ -746,6 +746,72 @@ void codegen_if(struct node *if_node){
     );
 }
 
+void codegen_for(struct node *for_node){
+    if(for_node == NULL){
+        return;
+    }
+
+    struct node *init = get_child(for_node, 0);
+    struct node *condition = get_child(for_node, 1);
+    struct node *increment = get_child(for_node, 2);
+    struct node *for_body = get_child(for_node, 3);
+
+    // Create labels for the for loop
+    int init_label = temporary++;
+    int condition_label = temporary++;
+    int body_label = temporary++;
+    int increment_label = temporary++;
+    int end_label = temporary++;
+
+    // Initialisation
+    printf(
+        "  br label %%L%dinit\n"
+        "L%dinit:\n", init_label, init_label
+    );
+    codegen_statement(init);
+
+    // Condition
+    printf(
+        "  br label %%L%dcond\n"
+        "L%dcond:\n", condition_label, condition_label
+    );
+    int cond_temp = codegen_expression(condition);
+    printf(
+        "  br i1 %%%d, label %%L%dbody, label %%L%dend\n"
+        "L%dbody:\n", cond_temp, body_label, end_label, body_label
+    );
+
+    // Body
+    codegen_statement(for_body);
+    printf(
+        "  br label %%L%dincr\n"
+        "L%dincr:\n", increment_label, increment_label
+    );
+
+    // Increment
+    codegen_statement(increment);
+    printf(
+        "  br label %%L%dcond\n", condition_label
+    );
+
+    // End of the for loop
+    printf(
+        "L%dend:\n", end_label
+    );
+}
+
+void codegen_block(struct node *block){
+    if(block == NULL){
+        return;
+    }
+
+    struct node_list *cur_child = block->children;
+    while((cur_child = cur_child->next) != NULL){
+        struct node *cur_node = cur_child->node;
+        codegen_statement(cur_node);
+    }
+}
+
 int codegen_statement(struct node *statement){
     if(statement == NULL){
         return temporary;
@@ -766,10 +832,10 @@ int codegen_statement(struct node *statement){
             codegen_return(statement);
             break;
         case Call:
-            //codegen_call(statement);
+            codegen_call(statement);
             break;
         case Block:
-            //codegen_block(statement);
+            codegen_block(statement);
             break;
         case Print:
             codegen_print(statement);

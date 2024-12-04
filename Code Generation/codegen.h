@@ -39,5 +39,6 @@ int codegen_eq(struct node *eq);
 int codegen_call(struct node *call);
 void codegen_return(struct node *return_node);
 void codegen_if(struct node *if_node);
+void codegen_block(struct node *block);
 
 #endif
