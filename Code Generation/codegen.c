@@ -8,6 +8,19 @@
 int temporary = 0;
 
 extern struct symbol_list *symbol_table;
+extern struct scopes_queue *symbol_scopes;
+struct symbol_list *cur_scope;
+
+struct symbol_list *get_scope(char *identifier){
+    struct scopes_queue *cur_scope = symbol_scopes;
+    while(cur_scope != NULL){
+        if(strcmp(cur_scope->identifier, identifier) == 0){
+            return cur_scope->table;
+        }
+        cur_scope = cur_scope->next;
+    }
+    return NULL;
+}
 
 char* llvm_types(enum type type){
     switch(type){
@@ -52,6 +65,12 @@ void codegen_func_header(struct node *func_header, enum type return_type){
 
     struct node *id = get_child(func_header, 0);
     
+    /*
+    This will be used to check if a identifier is a parameter to treat
+    it as such in the codegen_identifier function
+    */
+    cur_scope = get_scope(id->token);
+
     temporary = 1;
     
     // If the return type doesn't exist, func_params is the second child of the header
@@ -95,44 +114,46 @@ int codegen_identifier(struct node *id){
     }
 
     enum type id_type = id->type;
+    struct symbol_list *symbol = search_symbol(cur_scope, id->token);
 
-
-    // TODO: PASS SYMBOL SCOPE TO FUNCTION BODY AND USE IT TO GET THE PARAMETERS
-    // IF NOT PARAM
-    if(id_type == string){
-        printf(
-            "  %%%d = load i8*, i8** %%%s\n", temporary, id->token
-        );
-    }
-    else if(id_type == bool){
-        printf(
-            "  %%%d = load i1, i1* %%%s\n", temporary, id->token
-        );
-    }
-    else if(id_type == float32){
-        printf(
-            "  %%%d = load double, double* %%%s\n", temporary, id->token
-        );
+    // If the symbol is not a parameter, load the value from memory
+    if(symbol != NULL && !symbol->is_parameter){
+        if(id_type == string){
+            printf(
+                "  %%%d = load i8*, i8** %%%s\n", temporary, id->token
+            );
+        }
+        else if(id_type == bool){
+            printf(
+                "  %%%d = load i1, i1* %%%s\n", temporary, id->token
+            );
+        }
+        else if(id_type == float32){
+            printf(
+                "  %%%d = load double, double* %%%s\n", temporary, id->token
+            );
+        }
+        else{
+            printf(
+                "  %%%d = load i32, i32* %%%s\n", temporary, id->token
+            );
+        }
     }
     else{
-        printf(
-            "  %%%d = load i32, i32* %%%s\n", temporary, id->token
-        );
+        if(id_type == string) {
+            printf("  %%%d = add i8* %%%s, null\n", temporary, id->token);
+        }
+        else if(id_type == bool) {
+            printf("  %%%d = add i1 %%%s, 0\n", temporary, id->token);
+        }
+        else if(id_type == float32) {
+            printf("  %%%d = fadd double %%%s, 0.0\n", temporary, id->token);
+        }
+        else {
+            printf("  %%%d = add i32 %%%s, 0\n", temporary, id->token);
+        }
     }
-
-    //IF PARAM 
-    if(id_type == string) {
-        printf("  %%%d = add i8* %%%s, null\n", temporary, id->token);
-    }
-    else if(id_type == bool) {
-        printf("  %%%d = add i1 %%%s, 0\n", temporary, id->token);
-    }
-    else if(id_type == float32) {
-        printf("  %%%d = fadd double %%%s, 0.0\n", temporary, id->token);
-    }
-    else {
-        printf("  %%%d = add i32 %%%s, 0\n", temporary, id->token);
-    }
+    
     return temporary++;
 }
 
@@ -602,8 +623,8 @@ int codegen_plus(struct node *plus){
     return expr_temp;
 }
 
-int codegen_call(struct node *call){
-    if(call == NULL){
+int codegen_call(struct node *call, int is_expr) {
+    if(call == NULL) {
         return 0;
     }
 
@@ -613,29 +634,37 @@ int codegen_call(struct node *call){
     struct symbol_list *function_symbol = search_symbol(symbol_table, id->token);
     enum type return_type = function_symbol->type;
 
-
     char args_str[4096];
     args_str[0] = '\0';
 
     // Print comma separated arguments
     int cur_idx = 1;
     struct node *cur_arg;
-    while((cur_arg = get_child(call, cur_idx)) != NULL){
+    while((cur_arg = get_child(call, cur_idx)) != NULL) {
         int arg_temp = codegen_expression(cur_arg);
         char arg_str[128];
         sprintf(arg_str, "%s %%%d", llvm_types(cur_arg->type), arg_temp);
         strcat(args_str, arg_str);
-        if(get_child(call, cur_idx + 1) != NULL){
+        if(get_child(call, cur_idx + 1) != NULL) {
             strcat(args_str, ", ");
         }
         cur_idx++;
     }
-    // Start of the call
-    printf("  call %s @_%s(", llvm_types(return_type), id->token);
-    // Print arguments
-    printf("%s", args_str);
-    // End of the call
-    printf(")\n");
+
+
+    int temp = temporary;
+    // Only assign to temp register if function doesn't return void
+    if(return_type != none && is_expr) {
+        printf("  %%%d = ", temp);
+    }
+    else{
+        printf("  ");
+    }
+    
+    printf(
+        "call %s @_%s(%s)\n",
+        llvm_types(return_type), id->token, args_str
+    );
 
     return temporary++;
 }
@@ -710,7 +739,7 @@ int codegen_expression(struct node *expression){
             tmp = codegen_identifier(expression);
             break;
         case Call:
-            tmp = codegen_call(expression);
+            tmp = codegen_call(expression, 1);
             break;
         default:
             break;
@@ -810,6 +839,58 @@ void codegen_return(struct node *return_node){
     );
 }
 
+// void codegen_if(struct node *if_node) {
+//     if(if_node == NULL) {
+//         return;
+//     }
+
+//     struct node *condition = get_child(if_node, 0);
+//     struct node *if_body = get_child(if_node, 1);
+//     struct node *else_body = get_child(if_node, 2);
+//     int else_children = block_elements(else_body);
+
+//     int cond_temp = codegen_expression(condition);
+//     int start_temp = temporary;
+//     int if_label = temporary++;
+//     int end_label = temporary++;
+    
+//     if(else_children > 0) {
+//         int else_label = temporary++;
+        
+//         printf(
+//             "  br i1 %%%d, label %%L%dtrue, label %%L%dfalse\n"
+//             "L%dtrue:\n", cond_temp, if_label, else_label, if_label
+//         );
+        
+//         codegen_statement(if_body);
+        
+//         printf(
+//             "  br label %%L%dend\n"
+//             "L%dfalse:\n", end_label, else_label
+//         );
+        
+//         codegen_statement(else_body);
+        
+//         printf(
+//             "  br label %%L%dend\n"
+//             "L%dend:\n", end_label, end_label
+//         );
+//     } 
+//     else {
+//         printf(
+//             "  br i1 %%%d, label %%L%dtrue, label %%L%dend\n"
+//             "L%dtrue:\n", cond_temp, if_label, end_label, if_label
+//         );
+        
+//         codegen_statement(if_body);
+        
+//         printf(
+//             "  br label %%L%dend\n"
+//             "L%dend:\n", end_label, end_label
+//         );
+//     }
+// }
+
 void codegen_if(struct node *if_node){
     if(if_node == NULL){
         return;
@@ -822,10 +903,9 @@ void codegen_if(struct node *if_node){
     int cond_temp = codegen_expression(condition);
 
     // Create labels for the if statement
-    int if_label = temporary++;
-    int else_label = temporary++;
-    int end_label = temporary++;
-    temporary -= 3;
+    int if_label = temporary + 1;
+    int else_label = temporary + 2;
+    int end_label = temporary + 3;
 
     // Branch to the if or else body
     printf(
@@ -944,7 +1024,7 @@ int codegen_statement(struct node *statement){
             codegen_return(statement);
             break;
         case Call:
-            codegen_call(statement);
+            codegen_call(statement, 0);
             break;
         case Block:
             codegen_block(statement);
@@ -987,7 +1067,6 @@ void codegen_function(struct node *function){
         return;
     }
 
-    
     struct node *func_header = get_child(function, 0);
     struct node *func_body = get_child(function, 1);
 

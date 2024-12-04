@@ -36,10 +36,11 @@ int codegen_gt(struct node *gt);
 int codegen_le(struct node *le);
 int codegen_ge(struct node *ge);
 int codegen_eq(struct node *eq);
-int codegen_call(struct node *call);
+int codegen_call(struct node *call, int is_expr);
 void codegen_return(struct node *return_node);
 void codegen_if(struct node *if_node);
 void codegen_block(struct node *block);
 void codegen_parse_args(struct node *parse_args);
+struct symbol_list *get_scope(char *identifier);
 
 #endif
