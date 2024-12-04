@@ -1,34 +1,29 @@
 package main;
 
+func fcd() float32 {
+    return .1e1 + 0.007;
+}
+
+func fca() {}
+
+func fcb() int {
+    var fafcb int;
+    fafcb = 132;
+    return fafcb;
+}
+
+func fcg(iafcg int, fafcg float32) int {
+    if fcd() > fafcg {
+        fca();
+        return iafcg;
+    }
+    return fcb();
+}
+
 func fact(a int, b int) int{
-    
     return 15;
 }
 
 func main() {
-	//var a int;
-    //var a2 int;
-    //a2 = 10;
-    //a = 10;
-    //var b float32;
-    //b = 42.1;
-
-    var a int;
-    var b int;
-    b = fact(a, a);
-    fmt.Println(b);
-
-    //var bo bool;
-    //bo = 1==2
-    //fmt.Println(bo);
-    //fmt.Println(1>2);
-    //fmt.Println(4<=2);
-    //fmt.Println(3!=2);    
-    //fmt.Println(3!=3);  
-    //fmt.Println(-13);
-
-    //var mn int;
-    //mn = 23;
-    //mn = -mn;
-    //fmt.Println(-mn);
+    fcg(1, 0.2);
 }

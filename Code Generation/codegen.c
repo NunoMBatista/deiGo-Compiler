@@ -7,6 +7,8 @@
 
 int temporary = 0;
 
+#define MAX(a, b) ((a) > (b) ? (a) : (b))
+
 extern struct symbol_list *symbol_table;
 extern struct scopes_queue *symbol_scopes;
 struct symbol_list *cur_scope;
@@ -119,9 +121,7 @@ int codegen_identifier(struct node *id){
     // If the symbol is not a parameter, load the value from memory
     if(symbol != NULL && !symbol->is_parameter){
         if(id_type == string){
-            printf(
-                "  %%%d = load i8*, i8** %%%s\n", temporary, id->token
-            );
+            printf("  %%%d = load i8*, i8** %%%s\n", temporary, id->token);
         }
         else if(id_type == bool){
             printf(
@@ -141,7 +141,8 @@ int codegen_identifier(struct node *id){
     }
     else{
         if(id_type == string) {
-            printf("  %%%d = add i8* %%%s, null\n", temporary, id->token);
+            // For string parameters, just copy the pointer value
+            printf("  %%%d = bitcast i8* %%%s to i8*\n", temporary, id->token);
         }
         else if(id_type == bool) {
             printf("  %%%d = add i1 %%%s, 0\n", temporary, id->token);
@@ -302,19 +303,24 @@ int codegen_decimal(struct node *decimal){
         return 0;
     }
 
-    // Scientific notation
+    // Handle scientific notation
     char *e = strchr(decimal->token, 'e');
     if(e != NULL){
         double value;
         sscanf(decimal->token, "%lf", &value);
-        printf(
-            "  %%%d = fadd double %lf, 0.0\n", temporary, value
-        );
+        printf("  %%%d = fadd double %lf, 0.0\n", temporary, value);
     }
-    else{
-        printf(
-            "  %%%d = fadd double %s, 0.0\n", temporary, decimal->token
-        );
+    else {
+        // Handle numbers starting with a period (prepend a 0)
+        char *num = decimal->token;
+        if(num[0] == '.') {
+            char *fixed_num = malloc(strlen(num) + 2);
+            sprintf(fixed_num, "0%s", num);
+            printf("  %%%d = fadd double %s, 0.0\n", temporary, fixed_num);
+            free(fixed_num);
+        } else {
+            printf("  %%%d = fadd double %s, 0.0\n", temporary, num);
+        }
     }
 
     return temporary++;
@@ -323,8 +329,8 @@ int codegen_decimal(struct node *decimal){
 char* process_escape_sequences(const char* input, size_t* final_len) {
     size_t len = strlen(input);
     char* output = malloc(len * 2);
-    size_t j = 0;
-    size_t actual_len = 0;
+    int j = 0;
+    size_t real_len = 0;
     
     for(size_t i = 0; i < len; i++) {
         if(input[i] == '\\') {
@@ -335,19 +341,19 @@ char* process_escape_sequences(const char* input, size_t* final_len) {
                     output[j++] = '\\';
                     output[j++] = '0';
                     output[j++] = '9';
-                    actual_len++; // Count as one character
+                    real_len++; // Count as one character
                     break;
                 default:
                     output[j++] = input[i];
-                    actual_len++;
+                    real_len++;
             }
         } else {
             output[j++] = input[i];
-            actual_len++;
+            real_len++;
         }
     }
     output[j] = '\0';
-    *final_len = actual_len;
+    *final_len = real_len;
     return output;
 }
 
@@ -355,20 +361,23 @@ int codegen_strlit(struct node *strlit) {
     if(strlit == NULL) return 0;
 
     // Remove quotes
-    char *clean_str = strlit->token + 1;
+    char *clean_str = strdup(strlit->token + 1);
     clean_str[strlen(clean_str) - 1] = '\0';
     
     // Process escape sequences and get actual length
     size_t final_len;
     char *processed_str = process_escape_sequences(clean_str, &final_len);
-    
-    // Account for null terminator in array size
-    size_t array_size = final_len + 1;
-    
+    final_len++;
+
     // Use same size consistently
-    printf("  %%%d = alloca [%zu x i8]\n", temporary, array_size);
-    printf("  store [%zu x i8] c\"%s\\00\", [%zu x i8]* %%%d\n",
-           array_size, processed_str, array_size, temporary);
+    printf(
+        "  %%%d = alloca [%zu x i8]\n",
+        temporary, final_len
+    );
+    printf(
+        "  store [%zu x i8] c\"%s\\00\", [%zu x i8]* %%%d\n",
+        final_len, processed_str, final_len, temporary
+    );
     
     free(processed_str);
     return temporary++;
@@ -658,7 +667,6 @@ int codegen_call(struct node *call, int is_expr) {
             "  %%%d = call %s @_%s(%s)\n",
             temporary, llvm_types(return_type), id->token, args_str
         );
-        return temporary++;
     }
     else{
         printf(
@@ -666,7 +674,12 @@ int codegen_call(struct node *call, int is_expr) {
             llvm_types(return_type), id->token, args_str
         );
     }
-    return temporary;
+
+    if(return_type == none) {
+        return temporary;
+    }
+    // Still increment temporary even if not storing result
+    return temporary++;
 }
 
 int codegen_expression(struct node *expression){
@@ -758,6 +771,12 @@ void codegen_assign(struct node *assign){
 
     //int left_temp = codegen_expression(left);
     int right_temp = codegen_expression(right);
+
+    // Check if the left side is a parameter
+    // struct symbol_list *symbol = search_symbol(cur_scope, left->token);
+
+    // TODO: HANDLE LEFT PARAMS
+
     printf(
         "  store %s %%%d, %s* %%%s\n", llvm_types(left->type), right_temp, llvm_types(left->type), left->token
     );
@@ -802,22 +821,29 @@ void codegen_print(struct node *print_node){
             temporary += 2;
             break;
         case string:
-            // Remove quotes
-            char *clean_str = expression->token + 1;
-            clean_str[strlen(clean_str) - 1] = '\0';
+            if (expression->category == StrLit) {
+                // Handle string literals (existing code)
+                // Remove quotes
+                char *clean_str = strdup(expression->token + 1);
+                clean_str[strlen(clean_str) - 1] = '\0';
 
-            // Process escape sequences and get actual length
-            size_t final_len;
-            process_escape_sequences(clean_str, &final_len);
+                // Process escape sequences and get actual length
+                size_t final_len;
+                process_escape_sequences(clean_str, &final_len);
+                final_len++;
 
-            size_t array_size = final_len + 1; // \0
-
-            // Get pointer to start of array
-            printf("  %%ptr%d = getelementptr inbounds [%zu x i8], [%zu x i8]* %%%d, i32 0, i32 0\n", 
-                temporary, array_size, array_size, expr_temp);
-            // Print using the pointer
-            printf("  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str_string, i32 0, i32 0), i8* %%ptr%d)\n",
-                temporary);
+                // Get pointer to start of array
+                printf("  %%ptr%d = getelementptr inbounds [%zu x i8], [%zu x i8]* %%%d, i32 0, i32 0\n", 
+                    temporary, final_len, final_len, expr_temp);
+                // Print using the pointer
+                printf("  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str_string, i32 0, i32 0), i8* %%ptr%d)\n",
+                    temporary);
+            } 
+            else {
+                // Handle string variables
+                printf("  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str_string, i32 0, i32 0), i8* %%%d)\n",
+                    expr_temp);
+            }
             temporary++;
             break;
         default:
@@ -859,6 +885,7 @@ void codegen_if(struct node *if_node){
         "  br i1 %%%d, label %%L%dtrue, label %%L%dfalse\n"
         "L%dtrue:\n", cond_temp, label_id, label_id, label_id
     );
+
     codegen_statement(if_body);
 
     // Jump to the end of the if statement
@@ -866,6 +893,8 @@ void codegen_if(struct node *if_node){
         "  br label %%L%dend\n"
         "L%dfalse:\n", label_id, label_id
     );
+    
+    temporary = MAX(label_id + 1, temporary);
     codegen_statement(else_body);
     
 
@@ -874,7 +903,7 @@ void codegen_if(struct node *if_node){
         "  br label %%L%dend\n"
         "L%dend:\n", label_id, label_id
     );
-    temporary++;
+    temporary = MAX(label_id + 2, temporary);
 }
 
 void codegen_for(struct node *for_node){
@@ -886,22 +915,19 @@ void codegen_for(struct node *for_node){
     struct node *for_body = get_child(for_node, 1);
 
     // Create labels for the for statement
-    int cond_label = temporary++;
-    int body_label = temporary++;
-    int end_label = temporary++;
-    temporary -= 3;
+    int label_id = temporary;
 
     // Evaluate the condition
     printf(
         "  br label %%L%dcond\n"
-        "L%dcond:\n", cond_label, cond_label
+        "L%dcond:\n", label_id, label_id
     );
     int cond_temp = codegen_expression(condition);
     
     // Branch to the body or the end of the for statement
     printf(
         "  br i1 %%%d, label %%L%dbody, label %%L%dend\n"
-        "L%dbody:\n", cond_temp, body_label, end_label, body_label
+        "L%dbody:\n", cond_temp, label_id, label_id, label_id
     );
 
     codegen_statement(for_body);
@@ -909,11 +935,10 @@ void codegen_for(struct node *for_node){
     // Jump back to the condition
     printf(
         "  br label %%L%dcond\n"
-        "L%dend:\n", cond_label, end_label
+        "L%dend:\n", label_id, label_id
     );
 
-
-
+    temporary = MAX(label_id + 1, temporary);
 }
 
 void codegen_block(struct node *block){
@@ -939,15 +964,22 @@ void codegen_parse_args(struct node *parse_args){
 
     int right_temp = codegen_expression(right);
 
-    printf(
-        "  %%%d = call i32 @atoi(i8* %%%d)\n", temporary, right_temp
-    );
+    if(right->type == integer){
+        printf(
+            "  store i32 %%%d, i32* %%%s\n", right_temp, left->token
+        );
+    }
+    else{
+        printf(
+            "  %%%d = call i32 @atoi(i8* %%%d)\n", temporary, right_temp
+        );
 
-    printf(
-        "  store i32 %%%d, i32* %%%s\n", temporary, left->token
-    );
+        printf(
+            "  store i32 %%%d, i32* %%%s\n", temporary, left->token
+        );
+    }
 
-    temporary++;
+    //temporary++;
     return;
 }
 
