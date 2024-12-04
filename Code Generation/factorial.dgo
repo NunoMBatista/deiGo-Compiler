@@ -12,6 +12,28 @@ func fcb() int {
     return fafcb;
 }
 
+var bb bool;
+var ia, id, ib int;
+var fa, fb float32;
+
+func fch(iafch int, fafch float32, safch string) float32 {
+    fcg(
+        fcb(),
+        fcd());
+    fmt.Println(safch);
+    bb = 1 == 1;
+    if bb {
+        fmt.Println("FALSE");
+        iafch = ia + ib;
+        fafch = fa;
+        fb = fafch;
+        id = iafch;
+    }
+    fmt.Println("TRUE");
+
+    return .01;
+}
+
 func fcg(iafcg int, fafcg float32) int {
     if fcd() > fafcg {
         fca();
@@ -26,4 +48,6 @@ func fact(a int, b int) int{
 
 func main() {
     fcg(1, 0.2);
+    var a string;
+    fch(1, 2.2, a);
 }

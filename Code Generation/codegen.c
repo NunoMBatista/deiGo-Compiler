@@ -92,6 +92,26 @@ void codegen_func_header(struct node *func_header, enum type return_type){
     codegen_parameters(func_params);
     // End of function header
     printf(") {\n");
+    
+    // Create local variables for parameters to allow assignments
+    if(func_params != NULL) {
+        struct node_list *cur_param = func_params->children;
+        while((cur_param = cur_param->next) != NULL) {
+            struct node *param_decl = cur_param->node;
+            struct node *type = get_child(param_decl, 0);
+            struct node *id = get_child(param_decl, 1);
+            
+            enum category category = type->category;
+            enum type param_type = category_to_type(category);
+            
+            // Create local variable
+            printf("  %%%s.addr = alloca %s\n", id->token, llvm_types(param_type));
+            // Store parameter value
+            printf("  store %s %%%s, %s* %%%s.addr\n", 
+                llvm_types(param_type), id->token, 
+                llvm_types(param_type), id->token);
+        }
+    }
 }
 
 void codegen_var_decl(struct node *var_decl){
@@ -118,26 +138,32 @@ int codegen_identifier(struct node *id){
     enum type id_type = id->type;
     struct symbol_list *symbol = search_symbol(cur_scope, id->token);
 
+    // If the symbol does not exist in the current scope, it must be global (since we know there are no semantic errors or nested scopes)
+    if(symbol == NULL){
+        symbol = search_symbol(symbol_table, id->token);
+
+        // If the symbol is global, load the value from memory
+        if(symbol != NULL){
+            printf(
+                "  %%%d = load %s, %s* @%s\n", 
+                temporary, llvm_types(id_type), llvm_types(id_type), id->token
+            );
+        }
+
+        return temporary++;
+    }
+
     // If the symbol is not a parameter, load the value from memory
     if(symbol != NULL && !symbol->is_parameter){
-        if(id_type == string){
-            printf("  %%%d = load i8*, i8** %%%s\n", temporary, id->token);
-        }
-        else if(id_type == bool){
-            printf(
-                "  %%%d = load i1, i1* %%%s\n", temporary, id->token
-            );
-        }
-        else if(id_type == float32){
-            printf(
-                "  %%%d = load double, double* %%%s\n", temporary, id->token
-            );
-        }
-        else{
-            printf(
-                "  %%%d = load i32, i32* %%%s\n", temporary, id->token
-            );
-        }
+        printf(
+            "  %%%d = load %s, %s* %%%s\n", 
+            temporary, llvm_types(id_type), llvm_types(id_type), id->token
+        );
+    }
+    else if(symbol != NULL && symbol->is_parameter) {
+        // For parameters, load from the local address
+        printf("  %%%d = load %s, %s* %%%s.addr\n",
+            temporary, llvm_types(id_type), llvm_types(id_type), id->token);
     }
     else{
         if(id_type == string) {
@@ -769,17 +795,36 @@ void codegen_assign(struct node *assign){
     struct node *left = get_child(assign, 0);
     struct node *right = get_child(assign, 1);
 
-    //int left_temp = codegen_expression(left);
     int right_temp = codegen_expression(right);
 
     // Check if the left side is a parameter
-    // struct symbol_list *symbol = search_symbol(cur_scope, left->token);
+    struct symbol_list *symbol = search_symbol(cur_scope, left->token);
 
-    // TODO: HANDLE LEFT PARAMS
+    // If it does not exist in the current scope, it must be global
+    if(symbol == NULL){
+        symbol = search_symbol(symbol_table, left->token);
+    
+        if(symbol != NULL){
+            printf(
+                "  store %s %%%d, %s* @%s\n", 
+                llvm_types(left->type), right_temp, llvm_types(left->type), left->token
+            );
+        }
+        return;
+    }
 
-    printf(
-        "  store %s %%%d, %s* %%%s\n", llvm_types(left->type), right_temp, llvm_types(left->type), left->token
-    );
+    // Handle differently based on whether it's a parameter or local variable
+    if(symbol->is_parameter){
+        // For parameters, store to the local address variable
+        printf("  store %s %%%d, %s* %%%s.addr\n",
+            llvm_types(left->type), right_temp, 
+            llvm_types(left->type), left->token);
+    } else {
+        // For local variables, we store to the pointer
+        printf("  store %s %%%d, %s* %%%s\n", 
+            llvm_types(left->type), right_temp, 
+            llvm_types(left->type), left->token);
+    }
 }
 
 void codegen_print(struct node *print_node){
@@ -863,6 +908,7 @@ void codegen_return(struct node *return_node){
     printf(
         "  ret %s %%%d\n", llvm_types(expression->type), expr_temp
     );
+    temporary++;
 }
 
 void codegen_if(struct node *if_node){
@@ -1153,5 +1199,4 @@ void codegen_program(struct node *program){
                 "}\n"
             );
     }
-
 }
