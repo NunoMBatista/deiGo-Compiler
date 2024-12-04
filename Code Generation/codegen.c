@@ -880,8 +880,6 @@ void codegen_print(struct node *print_node){
             break;
         case bool:
             // Print false (@.str_false) or true (@.str_true) based on the value
-
-            // branch to print either the strings "true" or "false"
             printf(
                 "  br i1 %%%d, label %%L%dtrue, label %%L%dfalse\n"
                 "L%dtrue:\n"
@@ -897,7 +895,7 @@ void codegen_print(struct node *print_node){
             break;
         case string:
             if (expression->category == StrLit) {
-                // Handle string literals (existing code)
+                // Handle string literals
                 // Remove quotes
                 char *clean_str = strdup(expression->token + 1);
                 clean_str[strlen(clean_str) - 1] = '\0';
@@ -910,7 +908,6 @@ void codegen_print(struct node *print_node){
                 // Get pointer to start of array
                 printf("  %%ptr%d = getelementptr inbounds [%zu x i8], [%zu x i8]* %%%d, i32 0, i32 0\n", 
                     temporary, final_len, final_len, expr_temp);
-                // Print using the pointer
                 printf("  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str_string, i32 0, i32 0), i8* %%ptr%d)\n",
                     temporary);
             } 
