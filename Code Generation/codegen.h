@@ -40,5 +40,6 @@ int codegen_call(struct node *call);
 void codegen_return(struct node *return_node);
 void codegen_if(struct node *if_node);
 void codegen_block(struct node *block);
+void codegen_parse_args(struct node *parse_args);
 
 #endif

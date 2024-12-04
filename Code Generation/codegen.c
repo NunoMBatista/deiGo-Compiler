@@ -94,16 +94,63 @@ int codegen_identifier(struct node *id){
         return 0;
     }
 
-    printf(
-        "  %%%d = load %s, %s* %%%s\n", temporary, llvm_types(id->type), llvm_types(id->type), id->token
-    );
+    enum type id_type = id->type;
 
+
+    // TODO: PASS SYMBOL SCOPE TO FUNCTION BODY AND USE IT TO GET THE PARAMETERS
+    // IF NOT PARAM
+    if(id_type == string){
+        printf(
+            "  %%%d = load i8*, i8** %%%s\n", temporary, id->token
+        );
+    }
+    else if(id_type == bool){
+        printf(
+            "  %%%d = load i1, i1* %%%s\n", temporary, id->token
+        );
+    }
+    else if(id_type == float32){
+        printf(
+            "  %%%d = load double, double* %%%s\n", temporary, id->token
+        );
+    }
+    else{
+        printf(
+            "  %%%d = load i32, i32* %%%s\n", temporary, id->token
+        );
+    }
+
+    //IF PARAM 
+    if(id_type == string) {
+        printf("  %%%d = add i8* %%%s, null\n", temporary, id->token);
+    }
+    else if(id_type == bool) {
+        printf("  %%%d = add i1 %%%s, 0\n", temporary, id->token);
+    }
+    else if(id_type == float32) {
+        printf("  %%%d = fadd double %%%s, 0.0\n", temporary, id->token);
+    }
+    else {
+        printf("  %%%d = add i32 %%%s, 0\n", temporary, id->token);
+    }
     return temporary++;
 }
 
 int codegen_natural(struct node *natural_node){
     if(natural_node == NULL){
         return 0;
+    }
+
+    // Hex and octal
+    int value;
+    if(strncmp(natural_node->token, "0x", 2) == 0){
+        sscanf(natural_node->token, "%x", &value);
+    }
+    else if(natural_node->token[0] == '0' && natural_node->token[1] != '\0'){
+        sscanf(natural_node->token, "%o", &value);
+    }
+    else{
+        value = atoi(natural_node->token);
     }
 
     printf(
@@ -234,29 +281,75 @@ int codegen_decimal(struct node *decimal){
         return 0;
     }
 
-    printf(
-        "  %%%d = fadd double %s, 0.0\n", temporary, decimal->token
-    );
+    // Scientific notation
+    char *e = strchr(decimal->token, 'e');
+    if(e != NULL){
+        double value;
+        sscanf(decimal->token, "%lf", &value);
+        printf(
+            "  %%%d = fadd double %lf, 0.0\n", temporary, value
+        );
+    }
+    else{
+        printf(
+            "  %%%d = fadd double %s, 0.0\n", temporary, decimal->token
+        );
+    }
 
     return temporary++;
 }
 
-int codegen_strlit(struct node *strlit){
-    // Strlits should be type i8*
-    if(strlit == NULL){
-        return 0;
+char* process_escape_sequences(const char* input, size_t* final_len) {
+    size_t len = strlen(input);
+    char* output = malloc(len * 2);
+    size_t j = 0;
+    size_t actual_len = 0;
+    
+    for(size_t i = 0; i < len; i++) {
+        if(input[i] == '\\') {
+            i++; // Skip backslash
+            switch(input[i]) {
+                case 'n': case 't': case 'f': 
+                case 'r': case '\\': case '"':
+                    output[j++] = '\\';
+                    output[j++] = '0';
+                    output[j++] = '9';
+                    actual_len++; // Count as one character
+                    break;
+                default:
+                    output[j++] = input[i];
+                    actual_len++;
+            }
+        } else {
+            output[j++] = input[i];
+            actual_len++;
+        }
     }
+    output[j] = '\0';
+    *final_len = actual_len;
+    return output;
+}
 
-    // Remove the quotes from the string
+int codegen_strlit(struct node *strlit) {
+    if(strlit == NULL) return 0;
+
+    // Remove quotes
     char *clean_str = strlit->token + 1;
     clean_str[strlen(clean_str) - 1] = '\0';
-
-    printf(
-        "  %%%d = alloca [ %ld x i8 ]\n"
-        "  store [ %ld x i8 ] c\"%s\\00\", [ %ld x i8 ]* %%%d\n", 
-        temporary, strlen(clean_str) + 1, strlen(clean_str) + 1, clean_str, strlen(clean_str) + 1, temporary
-    );
-
+    
+    // Process escape sequences and get actual length
+    size_t final_len;
+    char *processed_str = process_escape_sequences(clean_str, &final_len);
+    
+    // Account for null terminator in array size
+    size_t array_size = final_len + 1;
+    
+    // Use same size consistently
+    printf("  %%%d = alloca [%zu x i8]\n", temporary, array_size);
+    printf("  store [%zu x i8] c\"%s\\00\", [%zu x i8]* %%%d\n",
+           array_size, processed_str, array_size, temporary);
+    
+    free(processed_str);
     return temporary++;
 }
 
@@ -680,9 +773,19 @@ void codegen_print(struct node *print_node){
             temporary += 2;
             break;
         case string:
+            // Remove quotes
+            char *clean_str = expression->token + 1;
+            clean_str[strlen(clean_str) - 1] = '\0';
+
+            // Process escape sequences and get actual length
+            size_t final_len;
+            process_escape_sequences(clean_str, &final_len);
+
+            size_t array_size = final_len + 1; // \0
+
             // Get pointer to start of array
             printf("  %%ptr%d = getelementptr inbounds [%zu x i8], [%zu x i8]* %%%d, i32 0, i32 0\n", 
-                temporary, strlen(expression->token), strlen(expression->token), expr_temp);
+                temporary, array_size, array_size, expr_temp);
             // Print using the pointer
             printf("  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str_string, i32 0, i32 0), i8* %%ptr%d)\n",
                 temporary);
@@ -722,6 +825,7 @@ void codegen_if(struct node *if_node){
     int if_label = temporary++;
     int else_label = temporary++;
     int end_label = temporary++;
+    temporary -= 3;
 
     // Branch to the if or else body
     printf(
@@ -751,53 +855,38 @@ void codegen_for(struct node *for_node){
         return;
     }
 
-    struct node *init = get_child(for_node, 0);
-    struct node *condition = get_child(for_node, 1);
-    struct node *increment = get_child(for_node, 2);
-    struct node *for_body = get_child(for_node, 3);
+    struct node *condition = get_child(for_node, 0);
+    struct node *for_body = get_child(for_node, 1);
 
-    // Create labels for the for loop
-    int init_label = temporary++;
-    int condition_label = temporary++;
+    // Create labels for the for statement
+    int cond_label = temporary++;
     int body_label = temporary++;
-    int increment_label = temporary++;
     int end_label = temporary++;
+    temporary -= 3;
 
-    // Initialisation
-    printf(
-        "  br label %%L%dinit\n"
-        "L%dinit:\n", init_label, init_label
-    );
-    codegen_statement(init);
-
-    // Condition
+    // Evaluate the condition
     printf(
         "  br label %%L%dcond\n"
-        "L%dcond:\n", condition_label, condition_label
+        "L%dcond:\n", cond_label, cond_label
     );
     int cond_temp = codegen_expression(condition);
+    
+    // Branch to the body or the end of the for statement
     printf(
         "  br i1 %%%d, label %%L%dbody, label %%L%dend\n"
         "L%dbody:\n", cond_temp, body_label, end_label, body_label
     );
 
-    // Body
     codegen_statement(for_body);
+
+    // Jump back to the condition
     printf(
-        "  br label %%L%dincr\n"
-        "L%dincr:\n", increment_label, increment_label
+        "  br label %%L%dcond\n"
+        "L%dend:\n", cond_label, end_label
     );
 
-    // Increment
-    codegen_statement(increment);
-    printf(
-        "  br label %%L%dcond\n", condition_label
-    );
 
-    // End of the for loop
-    printf(
-        "L%dend:\n", end_label
-    );
+
 }
 
 void codegen_block(struct node *block){
@@ -810,6 +899,29 @@ void codegen_block(struct node *block){
         struct node *cur_node = cur_child->node;
         codegen_statement(cur_node);
     }
+}
+
+void codegen_parse_args(struct node *parse_args){
+    if(parse_args == NULL){
+        return;
+    }
+
+    // Use atoi turn right string to left int
+    struct node *left = get_child(parse_args, 0);
+    struct node *right = get_child(parse_args, 1);
+
+    int right_temp = codegen_expression(right);
+
+    printf(
+        "  %%%d = call i32 @atoi(i8* %%%d)\n", temporary, right_temp
+    );
+
+    printf(
+        "  store i32 %%%d, i32* %%%s\n", temporary, left->token
+    );
+
+    temporary++;
+    return;
 }
 
 int codegen_statement(struct node *statement){
@@ -841,7 +953,7 @@ int codegen_statement(struct node *statement){
             codegen_print(statement);
             break;
         case ParseArgs:
-            //codegen_parse_args(statement);
+            codegen_parse_args(statement);
             break;
         default:
             break;
@@ -912,6 +1024,39 @@ void codegen_function(struct node *function){
     return;
 }
 
+void codegen_global_var_decl(struct node *var_decl){
+    if(var_decl == NULL){
+        return;
+    }
+
+    struct node *type = get_child(var_decl, 0);
+    struct node *id = get_child(var_decl, 1);
+
+    enum category category = type->category;
+    enum type var_type = category_to_type(category);
+
+    if(var_type == string){
+        printf(
+            "@%s = global %s null\n", id->token, llvm_types(var_type)
+        );
+    }
+    else if(var_type == bool){
+        printf(
+            "@%s = global %s false\n", id->token, llvm_types(var_type)
+        );
+    }
+    else if(var_type == float32){
+        printf(
+            "@%s = global %s 0.0\n", id->token, llvm_types(var_type)
+        );
+    }
+    else{
+        printf(
+            "@%s = global %s 0\n", id->token, llvm_types(var_type)
+        );
+    }
+}
+
 void codegen_program(struct node *program){
     if(program == NULL){
         return;
@@ -919,6 +1064,7 @@ void codegen_program(struct node *program){
 
     // Declare printf function
     printf(
+        "declare i32 @atoi(i8*)\n"
         "declare i32 @printf(i8*, ...)\n"
         "@.str_int = private constant [4 x i8] c\"%%d\\0A\\00\"\n"
         "@.str_float = private constant [7 x i8] c\"%%.08f\\0A\\00\"\n"
@@ -930,9 +1076,14 @@ void codegen_program(struct node *program){
 
     // Analyse every function in the program
     
-    struct node_list *functions = program->children;
-    while((functions = functions->next) != NULL){
-        codegen_function(functions->node);
+    struct node_list *func_decl = program->children;
+    while((func_decl = func_decl->next) != NULL){
+        if(func_decl->node->category == FuncDecl){
+            codegen_function(func_decl->node);
+        }
+        if(func_decl->node->category == VarDecl){
+            codegen_global_var_decl(func_decl->node);
+        }
     }
 
     struct symbol_list *entry = search_symbol(symbol_table, "main");
