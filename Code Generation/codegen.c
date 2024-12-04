@@ -409,20 +409,68 @@ int codegen_strlit(struct node *strlit) {
     return temporary++;
 }
 
-int codegen_or(struct node *or){
-    if(or == NULL){
+int codegen_or(struct node *or_node) {
+    if(or_node == NULL) {
         return 0;
     }
 
-    struct node *left = get_child(or, 0);
-    struct node *right = get_child(or, 1);
+    struct node *left = get_child(or_node, 0);
+    struct node *right = get_child(or_node, 1);
 
     int left_temp = codegen_expression(left);
-    int right_temp = codegen_expression(right);
+    int label_id = temporary;
 
-    printf(
-        "  %%%d = or i1 %%%d, %%%d\n", temporary, left_temp, right_temp
-    );
+    // Allocate space for the result
+    printf("  %%%d = alloca i1\n", temporary);
+    int result_addr = temporary++;
+
+    // If left is true, store true and jump to end
+    printf("  br i1 %%%d, label %%L%d_true, label %%L%d_false\n", left_temp, label_id, label_id);
+
+    printf("L%d_true:\n", label_id);
+    printf("  store i1 true, i1* %%%d\n", result_addr);
+    printf("  br label %%L%d_end\n", label_id);
+
+    printf("L%d_false:\n", label_id);
+    int right_temp = codegen_expression(right);
+    printf("  store i1 %%%d, i1* %%%d\n", right_temp, result_addr);
+    printf("  br label %%L%d_end\n", label_id);
+
+    printf("L%d_end:\n", label_id);
+    printf("  %%%d = load i1, i1* %%%d\n", temporary, result_addr);
+
+    return temporary++;
+}
+
+int codegen_and(struct node *and_node) {
+    if(and_node == NULL) {
+        return 0;
+    }
+
+    struct node *left = get_child(and_node, 0);
+    struct node *right = get_child(and_node, 1);
+
+    int left_temp = codegen_expression(left);
+    int label_id = temporary;
+
+    // Allocate space for the result
+    printf("  %%%d = alloca i1\n", temporary);
+    int result_addr = temporary++;
+
+    // If left is false, store false and jump to end
+    printf("  br i1 %%%d, label %%L%d_true, label %%L%d_false\n", left_temp, label_id, label_id);
+
+    printf("L%d_true:\n", label_id);
+    int right_temp = codegen_expression(right);
+    printf("  store i1 %%%d, i1* %%%d\n", right_temp, result_addr);
+    printf("  br label %%L%d_end\n", label_id);
+
+    printf("L%d_false:\n", label_id);
+    printf("  store i1 false, i1* %%%d\n", result_addr);
+    printf("  br label %%L%d_end\n", label_id);
+
+    printf("L%d_end:\n", label_id);
+    printf("  %%%d = load i1, i1* %%%d\n", temporary, result_addr);
 
     return temporary++;
 }
@@ -455,24 +503,6 @@ int codegen_eq(struct node *eq){
             "  %%%d = icmp eq i32 %%%d, %%%d\n", temporary, left_temp, right_temp
         );
     }       
-
-    return temporary++;
-}
-
-int codegen_and(struct node *and){
-    if(and == NULL){
-        return 0;
-    }
-
-    struct node *left = get_child(and, 0);
-    struct node *right = get_child(and, 1);
-
-    int left_temp = codegen_expression(left);
-    int right_temp = codegen_expression(right);
-
-    printf(
-        "  %%%d = and i1 %%%d, %%%d\n", temporary, left_temp, right_temp
-    );
 
     return temporary++;
 }
