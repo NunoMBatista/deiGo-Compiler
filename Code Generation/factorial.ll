@@ -63,15 +63,15 @@ define i32 @_fcg(i32 %iafcg, double %fafcg) {
   %1 = call double @_fcd()
   %2 = fadd double %fafcg, 0.0
   %3 = fcmp ogt double %1, %2
-  br i1 %3, label %L5true, label %L6false
-L5true:
+  br i1 %3, label %L4true, label %L4false
+L4true:
   call void @_fca()
-  %5 = add i32 %iafcg, 0
-  ret i32 %5
-  br label %L7end
-L6false:
-  br label %L7end
-L7end:
+  %4 = add i32 %iafcg, 0
+  ret i32 %4
+  br label %L4end
+L4false:
+  br label %L4end
+L4end:
   %6 = call i32 @_fcb()
   ret i32 %6
   ret i32 0
@@ -81,26 +81,24 @@ define double @_fch(i32 %iafch, double %fafch, i8* %safch) {
   %1 = call i32 @_fcb()
   %2 = call double @_fcd()
   call i32 @_fcg(i32 %1, double %2)
-  %4 = add i8* %safch, null
-  %ptr5 = getelementptr inbounds [4 x i8], [4 x i8]* %4, i32 0, i32 0
-  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str_string, i32 0, i32 0), i8* %ptr5)
-  %6 = add i1 %bb, 0
-  br i1 %6, label %L8true, label %L9false
-L8true:
-  %7 = add i32 %ia, 0
-  %8 = add i32 %ib, 0
-  %9 = add i32 %7, %8
-  store i32 %9, i32* %iafch
-  %10 = fadd double %fa, 0.0
-  store double %10, double* %fafch
-  %11 = fadd double %fafch, 0.0
-  store double %11, double* %fb
-  %12 = add i32 %iafch, 0
-  store i32 %12, i32* %id
-  br label %L10end
-L9false:
-  br label %L10end
-L10end:
+  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str_string, i32 0, i32 0), i8* %safch)
+  %5 = add i1 %bb, 0
+  br i1 %5, label %L6true, label %L6false
+L6true:
+  %6 = add i32 %ia, 0
+  %7 = add i32 %ib, 0
+  %8 = add i32 %6, %7
+  store i32 %8, i32* %iafch
+  %9 = fadd double %fa, 0.0
+  store double %9, double* %fafch
+  %10 = fadd double %fafch, 0.0
+  store double %10, double* %fb
+  %11 = add i32 %iafch, 0
+  store i32 %11, i32* %id
+  br label %L6end
+L6false:
+  br label %L6end
+L6end:
   %13 = fadd double .01, 0.0
   ret double %13
   ret double 0.0
@@ -113,37 +111,37 @@ define double @_fci(i32 %iafci, i32 %ibfci, double %fafci, double %fbfci, i8* %s
   %4 = call double @_fcd()
   %5 = call i8* @_fce()
   call double @_fch(i32 %3, double %4, i8* %5)
-  %7 = add i32 %ibfci, 0
-  %8 = add i32 12, 0
-  %9 = add i32 %7, %8
-  %10 = add i32 %ic, 0
-  %11 = add i32 %9, %10
-  %12 = call i32 @_fcb()
-  %13 = add i32 %11, %12
-  store i32 %13, i32* %iafci
-  %14 = call i1 @_fcf()
-  br i1 %14, label %L16true, label %L17false
-L16true:
-  %15 = add i8* %safci, null
-  %ptr16 = getelementptr inbounds [4 x i8], [4 x i8]* %15, i32 0, i32 0
-  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str_string, i32 0, i32 0), i8* %ptr16)
-  %17 = add i32 %ia, 0
-  %18 = fadd double %fa, 0.0
-  %19 = add i8* %sa, null
-  %20 = call double @_fch(i32 %17, double %18, i8* %19)
-  ret double %20
-  br label %L18end
-L17false:
-  %21 = fadd double %fa, 0.0
-  %22 = fadd double %fbfci, 0.0
-  %23 = fmul double %21, %22
-  %24 = call double @_fcd()
-  %25 = fadd double %23, %24
-  store double %25, double* %fafci
-  %26 = call double @_fcd()
-  ret double %26
-  br label %L18end
-L18end:
+  %6 = add i32 %ibfci, 0
+  %7 = add i32 12, 0
+  %8 = add i32 %6, %7
+  %9 = add i32 %ic, 0
+  %10 = add i32 %8, %9
+  %11 = call i32 @_fcb()
+  %12 = add i32 %10, %11
+  store i32 %12, i32* %iafci
+  %13 = call i1 @_fcf()
+  br i1 %13, label %L14true, label %L14false
+L14true:
+  %14 = add i8* %safci, null
+  %ptr15 = getelementptr inbounds [4 x i8], [4 x i8]* %14, i32 0, i32 0
+  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str_string, i32 0, i32 0), i8* %ptr15)
+  %16 = add i32 %ia, 0
+  %17 = fadd double %fa, 0.0
+  %18 = add i8* %sa, null
+  %19 = call double @_fch(i32 %16, double %17, i8* %18)
+  ret double %19
+  br label %L14end
+L14false:
+  %20 = fadd double %fa, 0.0
+  %21 = fadd double %fbfci, 0.0
+  %22 = fmul double %20, %21
+  %23 = call double @_fcd()
+  %24 = fadd double %22, %23
+  store double %24, double* %fafci
+  %25 = call double @_fcd()
+  ret double %25
+  br label %L14end
+L14end:
   ret double 0.0
 }
 
@@ -173,22 +171,22 @@ define i32 @_fcj(i32 %iafcj, i32 %ibfcj, double %fafcj, double %fbfcj, i1 %bafcj
   %20 = call double @_fci(i32 %12, i32 %13, double %17, double %18, i8* %19)
   %21 = call i32 @_fcg(i32 %11, double %20)
   %22 = icmp sgt i32 %10, %21
-  br i1 %22, label %L24true, label %L25false
-L24true:
+  br i1 %22, label %L23true, label %L23false
+L23true:
   %23 = add i1 %ba, 0
-  br i1 %23, label %L25true, label %L26false
-L25true:
+  br i1 %23, label %L24true, label %L24false
+L24true:
   %24 = fadd double .01, 0.0
   store double %24, double* %fc
-  br label %L27end
-L26false:
+  br label %L24end
+L24false:
   %25 = fadd double %fc, 0.0
   %26 = fadd double %fe, 0.0
   %27 = fadd double %25, %26
   store double %27, double* %fc
   %28 = add i1 %bafcj, 0
-  br i1 %28, label %L30true, label %L31false
-L30true:
+  br i1 %28, label %L29true, label %L29false
+L29true:
   br label %L29cond
 L29cond:
   %29 = call i1 @_fcf()
@@ -212,46 +210,46 @@ L30body:
   store double %43, double* %fbfcj
   br label %L29cond
 L31end:
-  br label %L32end
-L31false:
-  br label %L32end
-L32end:
-  br label %L27end
-L27end:
-  br label %L26end
-L25false:
-  br label %L26end
-L26end:
-  br label %L44cond
-L44cond:
-  %44 = add i1 %bb, 0
-  br i1 %44, label %L45body, label %L46end
-L45body:
-  %45 = add i1 %bc, 0
-  br i1 %45, label %L47true, label %L48false
-L47true:
-  %46 = add i1 %bd, 0
-  %47 = add i1 %ba, 0
-  %48 = and i1 %46, %47
-  store i1 %48, i1* %bd
-  %49 = add i1 %ba, 0
-  %50 = call i1 @_fcf()
+  br label %L29end
+L29false:
+  br label %L29end
+L29end:
+  br label %L24end
+L24end:
+  br label %L23end
+L23false:
+  br label %L23end
+L23end:
+  br label %L47cond
+L47cond:
+  %47 = add i1 %bb, 0
+  br i1 %47, label %L48body, label %L49end
+L48body:
+  %48 = add i1 %bc, 0
+  br i1 %48, label %L49true, label %L49false
+L49true:
+  %49 = add i1 %bd, 0
+  %50 = add i1 %ba, 0
   %51 = and i1 %49, %50
-  %52 = add i1 %bd, 0
-  %53 = add i1 %bc, 0
-  %54 = xor i1 %53, true
-  %55 = and i1 %52, %54
-  %56 = or i1 %51, %55
-  store i1 %56, i1* %bd
+  store i1 %51, i1* %bd
+  %52 = add i1 %ba, 0
+  %53 = call i1 @_fcf()
+  %54 = and i1 %52, %53
+  %55 = add i1 %bd, 0
+  %56 = add i1 %bc, 0
+  %57 = xor i1 %56, true
+  %58 = and i1 %55, %57
+  %59 = or i1 %54, %58
+  store i1 %59, i1* %bd
   br label %L49end
-L48false:
+L49false:
   br label %L49end
 L49end:
-  br label %L44cond
-L46end:
-  %57 = add i32 101, 0
-  %58 = sub i32 0, %57
-  ret i32 %58
+  br label %L47cond
+L49end:
+  %61 = add i32 101, 0
+  %62 = sub i32 0, %61
+  ret i32 %62
   ret i32 0
 }
 
@@ -307,8 +305,8 @@ L12body:
   %33 = call i1 @_fcf()
   %34 = call i32 @_fcj(i32 %19, i32 %20, double %31, double %32, i1 %33)
   %35 = icmp sgt i32 %16, %34
-  br i1 %35, label %L37true, label %L38false
-L37true:
+  br i1 %35, label %L36true, label %L36false
+L36true:
   %36 = add i32 12, 0
   %37 = add i32 %ia, 0
   %38 = fadd double %fa, 0.0
@@ -316,69 +314,69 @@ L37true:
   %40 = add i1 %ba, 0
   %41 = call i32 @_fcj(i32 %36, i32 %37, double %38, double %39, i1 %40)
   store i32 %41, i32* %mib
-  br label %L39end
-L38false:
+  br label %L36end
+L36false:
   %42 = add i32 %ia, 0
   %43 = call i32 @_fcb()
   %44 = add i32 %42, %43
   store i32 %44, i32* %mib
-  br label %L39end
-L39end:
+  br label %L36end
+L36end:
   br label %L11cond
 L13end:
-  %45 = load i32, i32* %mib
-  %46 = add i32 123, 0
-  %47 = add i32 456, 0
-  %48 = call i32 @_fcb()
-  %49 = add i32 %47, %48
-  %50 = call double @_fcd()
-  %51 = fadd double 123.321, 0.0
-  %52 = fadd double %50, %51
-  %53 = call i32 @_fcg(i32 %49, double %52)
-  %54 = add i32 %46, %53
-  %55 = add i32 %ia, 0
-  %56 = add i32 %ib, 0
-  %57 = add i32 %55, %56
-  %58 = add i32 %ic, 0
-  %59 = add i32 12, 0
-  %60 = sdiv i32 %58, %59
-  %61 = sub i32 %57, %60
-  %62 = add i32 %id, 0
-  %63 = add i32 %ie, 0
-  %64 = mul i32 %62, %63
-  %65 = call i32 @_fcb()
-  %66 = fadd double %fa, 0.0
-  %67 = call i32 @_fcg(i32 %65, double %66)
-  %68 = srem i32 %64, %67
-  %69 = add i32 %61, %68
-  %70 = add i32 %ia, 0
-  %71 = add i32 %ib, 0
-  %72 = add i32 %70, %71
-  %73 = add i32 123, 0
-  %74 = fadd double %fa, 0.0
-  %75 = call double @_fcd()
-  %76 = fadd double 100000000000.000000, 0.0
-  %77 = fdiv double %75, %76
-  %78 = fsub double %74, %77
-  %79 = call double @_fcd()
-  %80 = call i8* @_fce()
-  %81 = call double @_fci(i32 %72, i32 %73, double %78, double %79, i8* %80)
-  %82 = add i32 312, 0
-  %83 = add i32 12, 0
-  %84 = add i32 %82, %83
-  %85 = call double @_fcd()
-  %86 = fadd double 10000000000000000000000.000000, 0.0
-  %87 = fadd double %85, %86
-  %88 = call i8* @_fce()
-  %89 = call double @_fch(i32 %84, double %87, i8* %88)
-  %90 = call i1 @_fcf()
-  %91 = add i1 %ba, 0
-  %92 = and i1 %90, %91
-  %93 = add i1 %bb, 0
-  %94 = or i1 %92, %93
-  %95 = call i32 @_fcj(i32 %54, i32 %69, double %81, double %89, i1 %94)
-  %96 = add i32 %45, %95
-  store i32 %96, i32* %mia
+  %46 = load i32, i32* %mib
+  %47 = add i32 123, 0
+  %48 = add i32 456, 0
+  %49 = call i32 @_fcb()
+  %50 = add i32 %48, %49
+  %51 = call double @_fcd()
+  %52 = fadd double 123.321, 0.0
+  %53 = fadd double %51, %52
+  %54 = call i32 @_fcg(i32 %50, double %53)
+  %55 = add i32 %47, %54
+  %56 = add i32 %ia, 0
+  %57 = add i32 %ib, 0
+  %58 = add i32 %56, %57
+  %59 = add i32 %ic, 0
+  %60 = add i32 12, 0
+  %61 = sdiv i32 %59, %60
+  %62 = sub i32 %58, %61
+  %63 = add i32 %id, 0
+  %64 = add i32 %ie, 0
+  %65 = mul i32 %63, %64
+  %66 = call i32 @_fcb()
+  %67 = fadd double %fa, 0.0
+  %68 = call i32 @_fcg(i32 %66, double %67)
+  %69 = srem i32 %65, %68
+  %70 = add i32 %62, %69
+  %71 = add i32 %ia, 0
+  %72 = add i32 %ib, 0
+  %73 = add i32 %71, %72
+  %74 = add i32 123, 0
+  %75 = fadd double %fa, 0.0
+  %76 = call double @_fcd()
+  %77 = fadd double 100000000000.000000, 0.0
+  %78 = fdiv double %76, %77
+  %79 = fsub double %75, %78
+  %80 = call double @_fcd()
+  %81 = call i8* @_fce()
+  %82 = call double @_fci(i32 %73, i32 %74, double %79, double %80, i8* %81)
+  %83 = add i32 312, 0
+  %84 = add i32 12, 0
+  %85 = add i32 %83, %84
+  %86 = call double @_fcd()
+  %87 = fadd double 10000000000000000000000.000000, 0.0
+  %88 = fadd double %86, %87
+  %89 = call i8* @_fce()
+  %90 = call double @_fch(i32 %85, double %88, i8* %89)
+  %91 = call i1 @_fcf()
+  %92 = add i1 %ba, 0
+  %93 = and i1 %91, %92
+  %94 = add i1 %bb, 0
+  %95 = or i1 %93, %94
+  %96 = call i32 @_fcj(i32 %55, i32 %70, double %82, double %90, i1 %95)
+  %97 = add i32 %46, %96
+  store i32 %97, i32* %mia
   ret void
 }
 

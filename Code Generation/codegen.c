@@ -652,21 +652,21 @@ int codegen_call(struct node *call, int is_expr) {
     }
 
 
-    int temp = temporary;
     // Only assign to temp register if function doesn't return void
     if(return_type != none && is_expr) {
-        printf("  %%%d = ", temp);
+        printf(
+            "  %%%d = call %s @_%s(%s)\n",
+            temporary, llvm_types(return_type), id->token, args_str
+        );
+        return temporary++;
     }
     else{
-        printf("  ");
+        printf(
+            "  call %s @_%s(%s)\n",
+            llvm_types(return_type), id->token, args_str
+        );
     }
-    
-    printf(
-        "call %s @_%s(%s)\n",
-        llvm_types(return_type), id->token, args_str
-    );
-
-    return temporary++;
+    return temporary;
 }
 
 int codegen_expression(struct node *expression){
@@ -839,58 +839,6 @@ void codegen_return(struct node *return_node){
     );
 }
 
-// void codegen_if(struct node *if_node) {
-//     if(if_node == NULL) {
-//         return;
-//     }
-
-//     struct node *condition = get_child(if_node, 0);
-//     struct node *if_body = get_child(if_node, 1);
-//     struct node *else_body = get_child(if_node, 2);
-//     int else_children = block_elements(else_body);
-
-//     int cond_temp = codegen_expression(condition);
-//     int start_temp = temporary;
-//     int if_label = temporary++;
-//     int end_label = temporary++;
-    
-//     if(else_children > 0) {
-//         int else_label = temporary++;
-        
-//         printf(
-//             "  br i1 %%%d, label %%L%dtrue, label %%L%dfalse\n"
-//             "L%dtrue:\n", cond_temp, if_label, else_label, if_label
-//         );
-        
-//         codegen_statement(if_body);
-        
-//         printf(
-//             "  br label %%L%dend\n"
-//             "L%dfalse:\n", end_label, else_label
-//         );
-        
-//         codegen_statement(else_body);
-        
-//         printf(
-//             "  br label %%L%dend\n"
-//             "L%dend:\n", end_label, end_label
-//         );
-//     } 
-//     else {
-//         printf(
-//             "  br i1 %%%d, label %%L%dtrue, label %%L%dend\n"
-//             "L%dtrue:\n", cond_temp, if_label, end_label, if_label
-//         );
-        
-//         codegen_statement(if_body);
-        
-//         printf(
-//             "  br label %%L%dend\n"
-//             "L%dend:\n", end_label, end_label
-//         );
-//     }
-// }
-
 void codegen_if(struct node *if_node){
     if(if_node == NULL){
         return;
@@ -900,34 +848,33 @@ void codegen_if(struct node *if_node){
     struct node *if_body = get_child(if_node, 1);
     struct node *else_body = get_child(if_node, 2);
 
-    int cond_temp = codegen_expression(condition);
 
     // Create labels for the if statement
-    int if_label = temporary + 1;
-    int else_label = temporary + 2;
-    int end_label = temporary + 3;
+    int cond_temp = codegen_expression(condition);
+    
+    int label_id = temporary;
 
     // Branch to the if or else body
     printf(
         "  br i1 %%%d, label %%L%dtrue, label %%L%dfalse\n"
-        "L%dtrue:\n", cond_temp, if_label, else_label, if_label
+        "L%dtrue:\n", cond_temp, label_id, label_id, label_id
     );
-
     codegen_statement(if_body);
 
     // Jump to the end of the if statement
     printf(
         "  br label %%L%dend\n"
-        "L%dfalse:\n", end_label, else_label
+        "L%dfalse:\n", label_id, label_id
     );
-
     codegen_statement(else_body);
+    
 
     // End of the if statement
     printf(
         "  br label %%L%dend\n"
-        "L%dend:\n", end_label, end_label
+        "L%dend:\n", label_id, label_id
     );
+    temporary++;
 }
 
 void codegen_for(struct node *for_node){
