@@ -15,6 +15,7 @@ extern struct scopes_queue *symbol_scopes;
 struct symbol_list *cur_scope;
 int has_returned_branch = 0; // Determines whether to insert "br end" at the end of an if label
 int has_returned_function = 0;
+int in_branch = 0;
 
 struct symbol_list *get_scope(char *identifier){
     struct scopes_queue *cur_scope = symbol_scopes;
@@ -971,8 +972,11 @@ void codegen_return(struct node *return_node){
     if(return_node == NULL){
         return;
     }
+
+    if(!in_branch){
+        has_returned_function = 1;
+    }
     has_returned_branch = 1;
-    has_returned_function = 1;
 
     struct node *expression = get_child(return_node, 0);
 
@@ -1018,7 +1022,9 @@ void codegen_if(struct node *if_node){
     );
 
     has_returned_branch = 0;
+    in_branch = 1;
     codegen_statement(if_body);
+    in_branch = 0;
 
     // Jump to the end of the if statement
     if(!has_returned_branch){
@@ -1034,11 +1040,13 @@ void codegen_if(struct node *if_node){
     
     //temporary = MAX(label_id + 1, temporary);
     has_returned_branch = 0;
+    in_branch = 1;
     codegen_statement(else_body);    
+    in_branch = 0;
 
     if(!has_returned_branch){
         printf(
-            " br label %%L%dend\n", 
+            "  br label %%L%dend\n", 
             label_id
         );
     }
@@ -1075,7 +1083,9 @@ void codegen_for(struct node *for_node){
     );
 
     has_returned_branch = 0;
+    in_branch = 1;
     codegen_statement(for_body);
+    in_branch = 0;
 
     // Jump back to the condition
     printf(
