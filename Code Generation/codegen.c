@@ -6,6 +6,7 @@
 #include "codegen.h"
 
 int temporary = 0;
+int label_temporary = 0;
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
@@ -114,6 +115,8 @@ void codegen_func_header(struct node *func_header, enum type return_type){
             enum category category = type->category;
             enum type param_type = category_to_type(category);
             
+            insert_symbol(cur_scope, id->token, param_type, param_decl, 1, 0, 0);
+
             // Create local variable
             printf("  %%%s.addr = alloca %s\n", id->token, llvm_types(param_type));
             // Store parameter value
@@ -147,11 +150,12 @@ int codegen_identifier(struct node *id){
         return 0;
     }
 
+
     enum type id_type = id->type;
+
+    //TODO: ADD EVERY PARAMETER TO THE CUR_SCOPE
     struct symbol_list *symbol = search_symbol(cur_scope, id->token);
 
-    //printf("lbron");
-    //printf("symbol: %s, type: %d\n", id->token, id_type);
     // If the symbol does not exist in the current scope, it must be global (since we know there are no semantic errors or nested scopes)
     if(symbol == NULL){
         symbol = search_symbol(symbol_table, id->token);
@@ -431,7 +435,7 @@ int codegen_or(struct node *or_node) {
     struct node *right = get_child(or_node, 1);
 
     int left_temp = codegen_expression(left);
-    int label_id = temporary;
+    int label_id = label_temporary++;
 
     // Allocate space for the result
     printf("  %%%d = alloca i1\n", temporary);
@@ -862,12 +866,22 @@ void codegen_assign(struct node *assign){
         printf("  store %s %%%d, %s* %%%s.addr\n",
             llvm_types(left->type), right_temp, 
             llvm_types(left->type), left->token);
-    } else {
+
+        printf("  %%%d = load %s, %s* %%%s.addr\n",
+            temporary, llvm_types(left->type), llvm_types(left->type), left->token);
+    } 
+    else {
         // For local variables, we store to the pointer
         printf("  store %s %%%d, %s* %%%s\n", 
             llvm_types(left->type), right_temp, 
-            llvm_types(left->type), left->token);
+            llvm_types(left->type), left->token
+        );
+
+        printf("  %%%d = load %s, %s* %%%s\n",
+            temporary, llvm_types(left->type), llvm_types(left->type), left->token
+        );
     }
+    temporary++;
 }
 
 void codegen_print(struct node *print_node){
@@ -934,7 +948,6 @@ void codegen_print(struct node *print_node){
         default:
             break;
     }
-
 }
 
 void codegen_return(struct node *return_node){
@@ -1001,7 +1014,7 @@ void codegen_for(struct node *for_node){
     struct node *for_body = get_child(for_node, 1);
 
     // Create labels for the for statement
-    int label_id = temporary;
+    int label_id = label_temporary++;
 
     // Evaluate the condition
     printf(

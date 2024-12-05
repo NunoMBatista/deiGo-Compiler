@@ -1,12 +1,29 @@
 package main;
 
-func main() {
-	var i, counter int;
-	i = 0;
-	counter = 1;
-	for i < 14 {
-       i=  i +1
+func fcj () int {
+	var xint, x1int, x2int int;
+	var xbool bool;
+	var xfloat float32;
 
-	}
-    i = 3
+	xint = 1;
+
+	x1int = 2;
+
+    if x1int > 1 {
+        if x2int > -1 {
+            xfloat = .01;
+        } else {
+            if xbool {
+            	for xint < 10 {
+                    xint = xint+1;
+				}
+            }
+        }
+    }
+   
+    return -101;
+}
+
+func main() {
+	fcj();
 }
