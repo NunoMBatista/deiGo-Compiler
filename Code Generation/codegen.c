@@ -74,6 +74,8 @@ void codegen_func_header(struct node *func_header, enum type return_type){
 
     // Create new temporary scope
     cur_scope = get_scope(id->token);
+    //cur_scope = (struct symbol_list *) malloc(sizeof(struct symbol_list));
+
 
     temporary = 1;
     
