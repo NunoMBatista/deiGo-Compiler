@@ -4,8 +4,8 @@ var x int;
 func main() {
     fmt.Println(x);   
    
-    var x int;
-    x = 2;
+//    var x int;
+//    x = 2;
 
     fmt.Println(x);
 }
