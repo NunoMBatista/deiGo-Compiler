@@ -1151,30 +1151,52 @@ void codegen_function(struct node *function){
     struct symbol_list *function_symbol = search_symbol(symbol_table, get_child(func_header, 0)->token);
     enum type return_type = function_symbol->type;
 
+    // Generate the function header label
+    printf("L0:\n");
+    // Initialize the function's return register
+    if(return_type != none){
+        printf(
+            "  %%0 = alloca %s\n", llvm_types(return_type)
+        );
+    }
+
     // Generate the function header
     codegen_func_header(func_header, return_type);
 
     // Generate the function body
     codegen_body(func_body);
 
-    // Generate the function footer (add a default return statement)
-    printf("  ret %s", llvm_types(return_type));
-    switch(return_type){
-        case integer:
-            printf(" 0\n");
-            break;
-        case float32:
-            printf(" 0.0\n");
-            break;
-        case bool:
-            printf(" false\n");
-            break;
-        case string:
-            printf(" null\n");
-            break;
-        default:
-            printf("\n");
+    //// Generate the function footer (add a default return statement)
+    //printf("  ret %s", llvm_types(return_type));
+    //switch(return_type){
+    //    case integer:
+    //        printf(" 0\n");
+    //        break;
+    //    case float32:
+    //        printf(" 0.0\n");
+    //        break;
+    //    case bool:
+    //        printf(" false\n");
+    //        break;
+    //    case string:
+    //        printf(" null\n");
+    //        break;
+    //    default:
+    //        printf("\n");
+    //}
+
+    // Return label
+    printf("return:\n");
+    if(return_type != none){
+        printf(
+            "  %%%d = load %s, %s* %%0\n", temporary, llvm_types(return_type), llvm_types(return_type)
+        );
+
+        printf(
+            "  ret %s %%0\n", llvm_types(return_type)
+        );
     }
+
     printf("}\n\n");
 
     return;
