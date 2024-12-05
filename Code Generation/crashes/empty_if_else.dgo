@@ -10,7 +10,7 @@ func main() {
         //i = 2;
     }
 
-	if i == 0 {
+    if i == 0 {
         //i = 2;
 	} else {
         i = 2;
@@ -21,6 +21,4 @@ func main() {
 	} else {
         //i = 2;
     }
-
-
 }

@@ -76,8 +76,12 @@ void codegen_func_header(struct node *func_header, enum type return_type){
     //cur_scope = get_scope(id->token);
 
     // TODO: FREE BEFORE MALLOC
+    if(cur_scope != NULL){
+        free(cur_scope);
+    }
     cur_scope = (struct symbol_list *) malloc(sizeof(struct symbol_list));
-
+    cur_scope->identifier = strdup(id->token);
+    cur_scope->next = NULL;
 
     temporary = 1;
     
@@ -976,7 +980,7 @@ void codegen_if(struct node *if_node){
         "L%dfalse:\n", label_id, label_id
     );
     
-    temporary = MAX(label_id + 1, temporary);
+    //temporary = MAX(label_id + 1, temporary);
     codegen_statement(else_body);
     
 
@@ -985,7 +989,7 @@ void codegen_if(struct node *if_node){
         "  br label %%L%dend\n"
         "L%dend:\n", label_id, label_id
     );
-    temporary = MAX(label_id + 2, temporary);
+    //temporary = MAX(label_id + 2, temporary);
 }
 
 void codegen_for(struct node *for_node){
@@ -1020,7 +1024,7 @@ void codegen_for(struct node *for_node){
         "L%dend:\n", label_id, label_id
     );
 
-    temporary = MAX(label_id + 1, temporary);
+    //temporary = MAX(label_id + 1, temporary);
 }
 
 void codegen_block(struct node *block){
@@ -1215,13 +1219,13 @@ void codegen_program(struct node *program){
 
     // Analyse every function in the program
     
-    struct node_list *func_decl = program->children;
-    while((func_decl = func_decl->next) != NULL){
-        if(func_decl->node->category == FuncDecl){
-            codegen_function(func_decl->node);
+    struct node_list *decl = program->children;
+    while((decl = decl->next) != NULL){
+        if(decl->node->category == FuncDecl){
+            codegen_function(decl->node);
         }
-        if(func_decl->node->category == VarDecl){
-            codegen_global_var_decl(func_decl->node);
+        if(decl->node->category == VarDecl){
+            codegen_global_var_decl(decl->node);
         }
     }
 

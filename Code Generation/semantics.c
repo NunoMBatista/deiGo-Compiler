@@ -799,6 +799,7 @@ struct symbol_list *insert_symbol(struct symbol_list *table, char *identifier, e
 // look up a symbol by its identifier
 struct symbol_list *search_symbol(struct symbol_list *table, char *identifier) {
     struct symbol_list *symbol;
+    //printf("identifier: %s\n", identifier);
     for(symbol = table->next; symbol != NULL; symbol = symbol->next)
         if(strcmp(symbol->identifier, identifier) == 0)
             return symbol;
