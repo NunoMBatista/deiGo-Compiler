@@ -13,6 +13,8 @@ int label_temporary = 0;
 extern struct symbol_list *symbol_table;
 extern struct scopes_queue *symbol_scopes;
 struct symbol_list *cur_scope;
+int has_returned_branch = 0; // Determines whether to insert "br end" at the end of an if label
+int has_returned_function = 0;
 
 struct symbol_list *get_scope(char *identifier){
     struct scopes_queue *cur_scope = symbol_scopes;
@@ -76,7 +78,6 @@ void codegen_func_header(struct node *func_header, enum type return_type){
     // Create new temporary scope
     //cur_scope = get_scope(id->token);
 
-    // TODO: FREE BEFORE MALLOC
     if(cur_scope != NULL){
         free(cur_scope);
     }
@@ -104,6 +105,22 @@ void codegen_func_header(struct node *func_header, enum type return_type){
     // End of function header
     printf(") {\n");
     
+
+    // Generate the function header label
+    printf("L0:\n");
+    // Initialize the function's return register
+    if(return_type != none){
+        printf(
+            "  %%0 = alloca %s\n", llvm_types(return_type)
+        );
+    }
+    else{
+        printf(
+            "  %%0 = alloca i32\n" // PLACEHOLDER FOR VOID RETURN
+        );
+    }
+
+
     // Create local variables for parameters to allow assignments
     if(func_params != NULL) {
         struct node_list *cur_param = func_params->children;
@@ -954,14 +971,29 @@ void codegen_return(struct node *return_node){
     if(return_node == NULL){
         return;
     }
+    has_returned_branch = 1;
+    has_returned_function = 1;
 
     struct node *expression = get_child(return_node, 0);
 
     int expr_temp = codegen_expression(expression);
+    // printf(
+    //     "  ret %s %%%d\n", llvm_types(expression->type), expr_temp
+    // );
+
+    if(expression != NULL){
+        printf(
+            "  store %s %%%d, %s* %%0\n", 
+            llvm_types(expression->type), expr_temp, llvm_types(expression->type)
+        );
+    }
+
+    // Jump to return label
     printf(
-        "  ret %s %%%d\n", llvm_types(expression->type), expr_temp
+        "  br label %%return\n"
     );
-    temporary++;
+    //temporary++;
+
 }
 
 void codegen_if(struct node *if_node){
@@ -985,22 +1017,35 @@ void codegen_if(struct node *if_node){
         "L%dtrue:\n", cond_temp, label_id, label_id, label_id
     );
 
+    has_returned_branch = 0;
     codegen_statement(if_body);
 
     // Jump to the end of the if statement
+    if(!has_returned_branch){
+        printf(
+            "  br label %%L%dend\n", 
+            label_id
+        );
+    }
     printf(
-        "  br label %%L%dend\n"
-        "L%dfalse:\n", label_id, label_id
+        "L%dfalse:\n", 
+        label_id
     );
     
     //temporary = MAX(label_id + 1, temporary);
-    codegen_statement(else_body);
-    
+    has_returned_branch = 0;
+    codegen_statement(else_body);    
+
+    if(!has_returned_branch){
+        printf(
+            " br label %%L%dend\n", 
+            label_id
+        );
+    }
 
     // End of the if statement
     printf(
-        "  br label %%L%dend\n"
-        "L%dend:\n", label_id, label_id
+        "L%dend:\n", label_id
     );
     //temporary = MAX(label_id + 2, temporary);
 }
@@ -1029,6 +1074,7 @@ void codegen_for(struct node *for_node){
         "L%dbody:\n", cond_temp, label_id, label_id, label_id
     );
 
+    has_returned_branch = 0;
     codegen_statement(for_body);
 
     // Jump back to the condition
@@ -1036,6 +1082,7 @@ void codegen_for(struct node *for_node){
         "  br label %%L%dcond\n"
         "L%dend:\n", label_id, label_id
     );
+
 
     //temporary = MAX(label_id + 1, temporary);
 }
@@ -1151,19 +1198,12 @@ void codegen_function(struct node *function){
     struct symbol_list *function_symbol = search_symbol(symbol_table, get_child(func_header, 0)->token);
     enum type return_type = function_symbol->type;
 
-    // Generate the function header label
-    printf("L0:\n");
-    // Initialize the function's return register
-    if(return_type != none){
-        printf(
-            "  %%0 = alloca %s\n", llvm_types(return_type)
-        );
-    }
 
     // Generate the function header
     codegen_func_header(func_header, return_type);
 
     // Generate the function body
+    has_returned_function = 0;
     codegen_body(func_body);
 
     //// Generate the function footer (add a default return statement)
@@ -1185,15 +1225,28 @@ void codegen_function(struct node *function){
     //        printf("\n");
     //}
 
+    // Go to return label
+    if(!has_returned_function){
+        printf(
+            "  br label %%return\n"
+        );
+    }
+    
+    //temporary++;
+
     // Return label
     printf("return:\n");
     if(return_type != none){
         printf(
             "  %%%d = load %s, %s* %%0\n", temporary, llvm_types(return_type), llvm_types(return_type)
         );
-
         printf(
-            "  ret %s %%0\n", llvm_types(return_type)
+            "  ret %s %%%d\n", llvm_types(return_type), temporary
+        );
+    }
+    else{
+        printf(
+            "  ret void\n"
         );
     }
 
