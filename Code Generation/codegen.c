@@ -73,8 +73,10 @@ void codegen_func_header(struct node *func_header, enum type return_type){
     */
 
     // Create new temporary scope
-    cur_scope = get_scope(id->token);
-    //cur_scope = (struct symbol_list *) malloc(sizeof(struct symbol_list));
+    //cur_scope = get_scope(id->token);
+
+    // TODO: FREE BEFORE MALLOC
+    cur_scope = (struct symbol_list *) malloc(sizeof(struct symbol_list));
 
 
     temporary = 1;
@@ -128,6 +130,8 @@ void codegen_var_decl(struct node *var_decl){
 
     enum category category = type->category;
     enum type var_type = category_to_type(category);
+
+    insert_symbol(cur_scope, id->token, var_type, var_decl, 0, 0, 0);
 
     printf(
         "  %%%s = alloca %s\n", id->token, llvm_types(var_type)

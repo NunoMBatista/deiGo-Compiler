@@ -2,10 +2,9 @@ package main;
 
 var x int;
 func main() {
-    fmt.Println(x);   
-   
-//    var x int;
-//    x = 2;
-
+    fmt.Println(x);
+    x = 1;   
+    var x int;
+    x = 2;
     fmt.Println(x);
 }

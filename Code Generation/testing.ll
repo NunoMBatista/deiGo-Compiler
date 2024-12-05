@@ -9,7 +9,7 @@ declare i32 @printf(i8*, ...)
 
 @x = global i32 0
 define void @_main() {
-  %1 = load i32, i32* %x
+  %1 = load i32, i32* @x
   call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str_int, i32 0, i32 0), i32 %1)
   %x = alloca i32
   %3 = add i32 2, 0
