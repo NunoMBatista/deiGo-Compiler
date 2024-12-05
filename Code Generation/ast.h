@@ -7,9 +7,6 @@ enum category       {   AUX ,  Program ,  VarDecl ,  FuncDecl ,  FuncHeader ,  F
 enum type           {  integer, float32,   bool ,  string ,  undef,   none  };
 #define t_name      {   "int", "float32", "bool", "string", "undef", "none" }
 
-// #define type_name(type) (type == integer_type ? "integer" : (type == double_type ? "double" : "none"))
-// #define category_type(category) (category == Integer ? integer_type : (category == Double ? double_type : no_type))
-
 struct node {
     enum category category;
     char *token;

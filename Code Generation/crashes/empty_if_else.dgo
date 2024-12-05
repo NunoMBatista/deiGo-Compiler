@@ -2,7 +2,7 @@ package main;
 
 func main() {
 	var i int;
-    i = 0
+        i = 0
 
 	if i == 0 {
         //i = 2;

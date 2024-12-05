@@ -7,28 +7,15 @@ declare i32 @printf(i8*, ...)
 @.str_string = private constant [4 x i8] c"%s\0A\00"
 
 
+@x = global i32 0
 define void @_main() {
-  %i = alloca i32
-  %counter = alloca i32
-  %1 = add i32 0, 0
-  store i32 %1, i32* %i
-  %2 = add i32 1, 0
-  store i32 %2, i32* %counter
-  br label %L3cond
-L3cond:
-  %3 = load i32, i32* %i
-  %4 = add i32 14, 0
-  %5 = icmp slt i32 %3, %4
-  br i1 %5, label %L3body, label %L3end
-L3body:
-  %6 = load i32, i32* %i
-  %7 = add i32 1, 0
-  %8 = add i32 %6, %7
-  store i32 %8, i32* %i
-  br label %L3cond
-L3end:
-  %9 = add i32 3, 0
-  store i32 %9, i32* %i
+  %1 = load i32, i32* %x
+  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str_int, i32 0, i32 0), i32 %1)
+  %x = alloca i32
+  %3 = add i32 2, 0
+  store i32 %3, i32* %x
+  %4 = load i32, i32* %x
+  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str_int, i32 0, i32 0), i32 %4)
   ret void
 }
 

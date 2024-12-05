@@ -6,7 +6,7 @@ if [ "$1" = "clean" ]; then
 fi
 
 if [ "$1" = "zip" ]; then
-    zip gocompiler.zip gocompiler.l gocompiler.y ast.h ast.c semantics.c semantics.h
+    zip gocompiler.zip gocompiler.l gocompiler.y ast.h ast.c semantics.c semantics.h codegen.c codegen.h
     exit 0
 fi
 

@@ -71,6 +71,8 @@ void codegen_func_header(struct node *func_header, enum type return_type){
     This will be used to check if a identifier is a parameter to treat
     it as such in the codegen_identifier function
     */
+
+    // Create new temporary scope
     cur_scope = get_scope(id->token);
 
     temporary = 1;
@@ -138,10 +140,11 @@ int codegen_identifier(struct node *id){
     enum type id_type = id->type;
     struct symbol_list *symbol = search_symbol(cur_scope, id->token);
 
+    //printf("lbron");
+    //printf("symbol: %s, type: %d\n", id->token, id_type);
     // If the symbol does not exist in the current scope, it must be global (since we know there are no semantic errors or nested scopes)
     if(symbol == NULL){
         symbol = search_symbol(symbol_table, id->token);
-
         // If the symbol is global, load the value from memory
         if(symbol != NULL){
             printf(

@@ -2,7 +2,10 @@ package main;
 
 var x int;
 func main() {
-    x = 1;
+    fmt.Println(x);   
+   
     var x int;
     x = 2;
+
+    fmt.Println(x);
 }

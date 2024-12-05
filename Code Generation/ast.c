@@ -68,6 +68,7 @@ void dfs(struct node *cur_node, int depth){
     if(cur_node->token == NULL){
         printf("%s", category_name[cur_node->category]);
     }
+
     else{
         printf("%s(%s)", category_name[cur_node->category], cur_node->token);
     }
