@@ -1111,7 +1111,6 @@ void codegen_body(struct node *func_body){
             codegen_statement(cur_node);
         }
     }
-
 }
 
 void codegen_function(struct node *function){
