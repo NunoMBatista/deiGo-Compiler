@@ -1013,7 +1013,6 @@ void codegen_return(struct node *return_node){
     }
 
     if(!in_branch){
-        printf("go");
         has_returned_function = 1;
     }
     has_returned_branch = 1;
@@ -1139,24 +1138,18 @@ void codegen_for(struct node *for_node){
         );
     }
 
-    has_returned_branch = 0;
-    in_branch = 1;
+    //has_returned_branch = 0;
+    //in_branch = 1;
     codegen_statement(for_body);
-    in_branch = 0;
+    //in_branch = 0;
 
     if(condition != NULL) {
         // Jump back to the condition
-        if(!has_returned_branch){
-            printf(
-                "  br label %%L%dcond\n", label_id
-            );
-        }
+        printf(
+            "  br label %%L%dcond\n", label_id
+        );
         printf(
             "L%dend:\n", label_id
-        );
-        // Dummy instruction to avoid label error
-        printf(
-            "  %%%d = add i32 0, 0\n", temporary++
         );
     } else {
         // Jump back to the beginning of the loop body

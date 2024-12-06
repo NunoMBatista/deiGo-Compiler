@@ -38,7 +38,7 @@ L3end:
   %6 = add i32 0, 0
   br label %L1end
 L1end:
-go  br label %return
+  br label %return
 L0end:
   %7 = add i32 0, 0
 return:
