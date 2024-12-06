@@ -25,22 +25,20 @@ L2cond:
 L2body:
   br label %L2cond
 L2end:
-  %4 = add i32 0, 0
   br label %L1end
 L1false:
   br label %L3cond
 L3cond:
-  %5 = load i1, i1* %b
-  br i1 %5, label %L3body, label %L3end
+  %4 = load i1, i1* %b
+  br i1 %4, label %L3body, label %L3end
 L3body:
   br label %L3cond
 L3end:
-  %6 = add i32 0, 0
   br label %L1end
 L1end:
   br label %return
+  br label %L0cond
 L0end:
-  %7 = add i32 0, 0
 return:
   ret i32 0
 }
