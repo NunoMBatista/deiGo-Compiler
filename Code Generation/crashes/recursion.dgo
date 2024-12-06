@@ -1,0 +1,26 @@
+func factorial(n int) int {
+    if n <= 1 {
+        return 1;
+    }
+    return n * factorial(n - 1);
+}
+
+func main() {
+    var a, b, c, result int;
+    a = factorial(5);   // 120
+    b = factorial(3);   // 6
+    c = factorial(7);   // 5040
+
+    result = (((a * b) / c) + 5 * (2) - (b * a / (c + 1))) * (a - b) / (c % b) + ((a + c) % b);
+    fmt.Println(result);
+
+    if result == 0 {
+        fmt.Println("Zeroed out crazy result!");
+    } else {
+    }
+    if result > 1000 {
+        fmt.Println("Big number!");
+    } else {
+        fmt.Println("Smaller than expected!");
+    }
+}

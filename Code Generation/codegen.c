@@ -137,10 +137,13 @@ void codegen_func_header(struct node *func_header, enum type return_type){
 
             // Create local variable
             printf("  %%%s.addr = alloca %s\n", id->token, llvm_types(param_type));
-            // Store parameter value
-            printf("  store %s %%%s, %s* %%%s.addr\n", 
-                llvm_types(param_type), id->token, 
-                llvm_types(param_type), id->token);
+            if(param_type == string){
+                // Initialize to empty string
+                printf("  store i8* getelementptr inbounds ([1 x i8], [1 x i8]* @.empty_str, i32 0, i32 0), i8** %%%s.addr\n", id->token);
+            } else {
+                // Store parameter value
+                printf("  store %s %%%s, %s* %%%s.addr\n", llvm_types(param_type), id->token, llvm_types(param_type), id->token);
+            }
         }
     }
 }
@@ -158,9 +161,16 @@ void codegen_var_decl(struct node *var_decl){
 
     insert_symbol(cur_scope, id->token, var_type, var_decl, 0, 0, 0);
 
-    printf(
-        "  %%%s = alloca %s\n", id->token, llvm_types(var_type)
+    if(var_type == string){
+        // Allocate space for i8* (string pointer)
+        printf("  %%%s = alloca i8*\n", id->token);
+        // Initialize to point to empty string
+        printf("  store i8* getelementptr inbounds ([1 x i8], [1 x i8]* @.empty_str, i32 0, i32 0), i8** %%%s\n", id->token);
+    } else {
+        printf(
+            "  %%%s = alloca %s\n", id->token, llvm_types(var_type)
         );
+    }
 }
 
 int codegen_identifier(struct node *id){
@@ -399,37 +409,37 @@ char* process_escape_sequences(const char* input, size_t* final_len) {
             switch(input[i]) {
                 case 'n':
                     output[j++] = '\\';
-                    output[j++] = '0'; // newline
+                    output[j++] = '0';
                     output[j++] = 'A';
                     real_len++;
                     break;
                 case 't':
                     output[j++] = '\\';
-                    output[j++] = '0'; // tab
+                    output[j++] = '0';
                     output[j++] = '9';
                     real_len++;
                     break;
                 case 'f':
                     output[j++] = '\\';
-                    output[j++] = '0'; // form feed
+                    output[j++] = '0';
                     output[j++] = 'C';
                     real_len++;
                     break;
                 case 'r':
                     output[j++] = '\\';
-                    output[j++] = '0'; // carriage return
+                    output[j++] = '0';
                     output[j++] = 'D';
                     real_len++;
                     break;
                 case '\\':
                     output[j++] = '\\';
-                    output[j++] = '5'; // backslash
+                    output[j++] = '5';
                     output[j++] = 'C';
                     real_len++;
                     break;
                 case '"':
                     output[j++] = '\\';
-                    output[j++] = '2'; // quote
+                    output[j++] = '2';
                     output[j++] = '2';
                     real_len++;
                     break;
@@ -515,7 +525,7 @@ int codegen_and(struct node *and_node) {
     struct node *right = get_child(and_node, 1);
 
     int left_temp = codegen_expression(left);
-    int label_id = temporary;
+    int label_id = label_temporary++;
 
     // Allocate space for the result
     printf("  %%%d = alloca i1\n", temporary);
@@ -1003,6 +1013,7 @@ void codegen_return(struct node *return_node){
     }
 
     if(!in_branch){
+        printf("go");
         has_returned_function = 1;
     }
     has_returned_branch = 1;
@@ -1042,7 +1053,7 @@ void codegen_if(struct node *if_node){
     // Create labels for the if statement
     int cond_temp = codegen_expression(condition);
     
-    int label_id = temporary;
+    int label_id = label_temporary++;
 
     // Branch to the if or else body
     printf(
@@ -1092,38 +1103,68 @@ void codegen_for(struct node *for_node){
         return;
     }
 
-    struct node *condition = get_child(for_node, 0);
-    struct node *for_body = get_child(for_node, 1);
+    struct node *for_body = NULL;
+    struct node *condition = NULL;
+    // There is no condition, just a block
+    if(block_elements(for_node) == 1){
+        for_body = get_child(for_node, 0);
+    }
+    else{
+        condition = get_child(for_node, 0);    
+        for_body = get_child(for_node, 1);
+    }
 
-    // Create labels for the for statement
+
     int label_id = label_temporary++;
 
-    // Evaluate the condition
-    printf(
-        "  br label %%L%dcond\n"
-        "L%dcond:\n", label_id, label_id
-    );
-    int cond_temp = codegen_expression(condition);
-    
-    // Branch to the body or the end of the for statement
-    printf(
-        "  br i1 %%%d, label %%L%dbody, label %%L%dend\n"
-        "L%dbody:\n", cond_temp, label_id, label_id, label_id
-    );
+
+    if(condition != NULL) {
+        // Evaluate the condition
+        printf(
+            "  br label %%L%dcond\n"
+            "L%dcond:\n", label_id, label_id
+        );
+        int cond_temp = codegen_expression(condition);
+        
+        // Branch to the body or the end of the for statement
+        printf(
+            "  br i1 %%%d, label %%L%dbody, label %%L%dend\n"
+            "L%dbody:\n", cond_temp, label_id, label_id, label_id
+        );
+    } else {
+        // No condition, loop forever
+        printf(
+            "  br label %%L%dbody\n"
+            "L%dbody:\n", label_id, label_id
+        );
+    }
 
     has_returned_branch = 0;
     in_branch = 1;
     codegen_statement(for_body);
     in_branch = 0;
 
-    // Jump back to the condition
-    printf(
-        "  br label %%L%dcond\n"
-        "L%dend:\n", label_id, label_id
-    );
-
-
-    //temporary = MAX(label_id + 1, temporary);
+    if(condition != NULL) {
+        // Jump back to the condition
+        if(!has_returned_branch){
+            printf(
+                "  br label %%L%dcond\n", label_id
+            );
+        }
+        printf(
+            "L%dend:\n", label_id
+        );
+        // Dummy instruction to avoid label error
+        printf(
+            "  %%%d = add i32 0, 0\n", temporary++
+        );
+    } else {
+        // Jump back to the beginning of the loop body
+        printf(
+            "  br label %%L%dbody\n", label_id
+        );
+        // No end label needed
+    }
 }
 
 void codegen_block(struct node *block){
@@ -1306,11 +1347,9 @@ void codegen_global_var_decl(struct node *var_decl){
     enum type var_type = category_to_type(category);
 
     if(var_type == string){
-        printf(
-            "@%s = global %s null\n", id->token, llvm_types(var_type)
-        );
-    }
-    else if(var_type == bool){
+        // Initialize to point to empty string
+        printf("@%s = global i8* getelementptr inbounds ([1 x i8], [1 x i8]* @.empty_str, i32 0, i32 0)\n", id->token);
+    } else if(var_type == bool){
         printf(
             "@%s = global %s false\n", id->token, llvm_types(var_type)
         );
@@ -1327,6 +1366,45 @@ void codegen_global_var_decl(struct node *var_decl){
     }
 }
 
+void codegen_main(struct node *main){
+    if(main == NULL){
+        return;
+    }
+
+    struct node *func_body = get_child(main, 1);
+    temporary = 1;
+    // Generate the function header
+    //codegen_func_header(func_header, none);
+    cur_scope = (struct symbol_list *) malloc(sizeof(struct symbol_list));
+    cur_scope->identifier = strdup("main");
+    cur_scope->next = NULL;
+
+    printf(
+        "define i32 @main() {\n"
+    );
+
+    // Generate the function body
+    has_returned_function = 0;
+    codegen_body(func_body);
+
+    // Go to return label
+    if(!has_returned_function){
+        printf(
+            "  br label %%return\n"
+        );
+    }
+
+    // Return label
+    printf("return:\n");
+    printf(
+        "  ret i32 0\n"
+    );
+
+    printf("}\n\n");
+
+    return;
+}
+
 void codegen_program(struct node *program){
     if(program == NULL){
         return;
@@ -1337,10 +1415,11 @@ void codegen_program(struct node *program){
         "declare i32 @atoi(i8*)\n"
         "declare i32 @printf(i8*, ...)\n"
         "@.str_int = private constant [4 x i8] c\"%%d\\0A\\00\"\n"
-        "@.str_float = private constant [7 x i8] c\"%%.08f\\0A\\00\"\n"
+        "@.str_float = private constant [7 x i8] c\"%%.08F\\0A\\00\"\n"
         "@.str_true = private constant [6 x i8] c\"true\\0A\\00\"\n"
         "@.str_false = private constant [7 x i8] c\"false\\0A\\00\"\n"
         "@.str_string = private constant [4 x i8] c\"%%s\\0A\\00\"\n"
+        "@.empty_str = private constant [1 x i8] c\"\\00\"\n"
         "\n\n"
     );
 
@@ -1349,6 +1428,12 @@ void codegen_program(struct node *program){
     struct node_list *decl = program->children;
     while((decl = decl->next) != NULL){
         if(decl->node->category == FuncDecl){
+            // Check if it's the main function
+            struct node *func_header = get_child(decl->node, 0);
+            if(strcmp(get_child(func_header, 0)->token, "main") == 0){
+                continue;
+            }
+
             codegen_function(decl->node);
         }
         if(decl->node->category == VarDecl){
@@ -1357,12 +1442,16 @@ void codegen_program(struct node *program){
     }
 
     struct symbol_list *entry = search_symbol(symbol_table, "main");
+    // if((entry != NULL) && (entry->node->category == FuncDecl)){
+    //     printf(
+    //             "define i32 @main() {\n"
+    //             "  call void @_main()\n"
+    //             "  ret i32 0\n"
+    //             "}\n"
+    //         );
+    // }
+
     if((entry != NULL) && (entry->node->category == FuncDecl)){
-        printf(
-                "define i32 @main() {\n"
-                "  call void @_main()\n"
-                "  ret i32 0\n"
-                "}\n"
-            );
+        codegen_main(entry->node);
     }
 }

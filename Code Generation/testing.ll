@@ -1,87 +1,47 @@
 declare i32 @atoi(i8*)
 declare i32 @printf(i8*, ...)
 @.str_int = private constant [4 x i8] c"%d\0A\00"
-@.str_float = private constant [7 x i8] c"%.08f\0A\00"
+@.str_float = private constant [7 x i8] c"%.08F\0A\00"
 @.str_true = private constant [6 x i8] c"true\0A\00"
 @.str_false = private constant [7 x i8] c"false\0A\00"
 @.str_string = private constant [4 x i8] c"%s\0A\00"
+@.empty_str = private constant [1 x i8] c"\00"
 
-
-@b = global i1 false
-@a = global i32 0
-define void @_main() {
-L0:
-  %0 = alloca i32
-  %a = alloca i32
-  %f = alloca double
-  %1 = add i32 10, 0
-  store i32 %1, i32* %a
-  %2 = load i32, i32* %a
-  %3 = fadd double 10.12332, 0.0
-  store double %3, double* %f
-  %4 = load double, double* %f
-  %5 = load double, double* %f
-  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str_float, i32 0, i32 0), double %5)
-  %7 = load i32, i32* %a
-  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str_int, i32 0, i32 0), i32 %7)
-  %9 = fadd double 1.000003, 0.0
-  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str_float, i32 0, i32 0), double %9)
-  %11 = fadd double 1.478347, 0.0
-  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str_float, i32 0, i32 0), double %11)
-  %13 = add i32 0, 0
-  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str_int, i32 0, i32 0), i32 %13)
-  %15 = add i32 0, 0
-  %16 = sub i32 0, %15
-  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str_int, i32 0, i32 0), i32 %16)
-  %18 = fadd double 0.00, 0.0
-  %19 = fsub double 0.0, %18
-  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str_float, i32 0, i32 0), double %19)
-  %21 = alloca [10 x i8]
-  store [10 x i8] c"sdjfhighi\00", [10 x i8]* %21
-  %ptr22 = getelementptr inbounds [10 x i8], [10 x i8]* %21, i32 0, i32 0
-  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str_string, i32 0, i32 0), i8* %ptr22)
-  %23 = alloca [6 x i8]
-  store [6 x i8] c"\09 tab\00", [6 x i8]* %23
-  %ptr24 = getelementptr inbounds [6 x i8], [6 x i8]* %23, i32 0, i32 0
-  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str_string, i32 0, i32 0), i8* %ptr24)
-  %25 = alloca [10 x i8]
-  store [10 x i8] c"\0A newline\00", [10 x i8]* %25
-  %ptr26 = getelementptr inbounds [10 x i8], [10 x i8]* %25, i32 0, i32 0
-  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str_string, i32 0, i32 0), i8* %ptr26)
-  %27 = alloca [10 x i8]
-  store [10 x i8] c"\5C barra \5C\00", [10 x i8]* %27
-  %ptr28 = getelementptr inbounds [10 x i8], [10 x i8]* %27, i32 0, i32 0
-  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str_string, i32 0, i32 0), i8* %ptr28)
-  %29 = alloca [7 x i8]
-  store [7 x i8] c"\0C feed\00", [7 x i8]* %29
-  %ptr30 = getelementptr inbounds [7 x i8], [7 x i8]* %29, i32 0, i32 0
-  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str_string, i32 0, i32 0), i8* %ptr30)
-  %31 = alloca [11 x i8]
-  store [11 x i8] c"\0D carriage\00", [11 x i8]* %31
-  %ptr32 = getelementptr inbounds [11 x i8], [11 x i8]* %31, i32 0, i32 0
-  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str_string, i32 0, i32 0), i8* %ptr32)
-  %33 = alloca [10 x i8]
-  store [10 x i8] c"\22aspazita\00", [10 x i8]* %33
-  %ptr34 = getelementptr inbounds [10 x i8], [10 x i8]* %33, i32 0, i32 0
-  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str_string, i32 0, i32 0), i8* %ptr34)
-  %35 = alloca [18 x i8]
-  store [18 x i8] c"\0C varios \09  \5C \0A \22\00", [18 x i8]* %35
-  %ptr36 = getelementptr inbounds [18 x i8], [18 x i8]* %35, i32 0, i32 0
-  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str_string, i32 0, i32 0), i8* %ptr36)
-  %37 = alloca [27 x i8]
-  store [27 x i8] c"cena do printf %s %d %l %x\00", [27 x i8]* %37
-  %ptr38 = getelementptr inbounds [27 x i8], [27 x i8]* %37, i32 0, i32 0
-  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str_string, i32 0, i32 0), i8* %ptr38)
-  %39 = alloca [1019 x i8]
-  store [1019 x i8] c"Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis quis blandit tellus. Curabitur ornare elementum mollis. Pellentesque eleifend tempor justo in facilisis. Phasellus ut mattis ex. Etiam et imperdiet nisl. Nam sit amet justo ante. Proin semper varius luctus. Quisque a lorem neque. Ut nec augue eu sapien interdum euismod at nec urna. Nulla et nunc sodales, pulvinar erat in, sagittis quam. Duis vulputate augue finibus ligula mattis congue. Maecenas condimentum nunc ante, non facilisis est aliquam sed. Donec vel ex nec est pharetra aliquam a quis dui. Aenean ac quam hendrerit, suscipit orci et, vestibulum quam. Donec volutpat hendrerit mi sed placerat. Donec dignissim sapien feugiat felis placerat cursus. Suspendisse mattis magna non risus ornare, a auctor nisl consequat. Nam viverra risus ac dui pharetra, id posuere massa mattis. Nullam at pellentesque neque. Curabitur tempus molestie mi ac ornare. Aenean tortor nisl, condimentum eget ligula a, consequat bibendum justo. Donec nec viverra massa. \00", [1019 x i8]* %39
-  %ptr40 = getelementptr inbounds [1019 x i8], [1019 x i8]* %39, i32 0, i32 0
-  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str_string, i32 0, i32 0), i8* %ptr40)
-  br label %return
-return:
-  ret void
-}
 
 define i32 @main() {
-  call void @_main()
+  %b = alloca i1
+  br label %L0cond
+L0cond:
+  %1 = load i1, i1* %b
+  br i1 %1, label %L0body, label %L0end
+L0body:
+  %2 = load i1, i1* %b
+  br i1 %2, label %L1true, label %L1false
+L1true:
+  br label %L2cond
+L2cond:
+  %3 = load i1, i1* %b
+  br i1 %3, label %L2body, label %L2end
+L2body:
+  br label %L2cond
+L2end:
+  %4 = add i32 0, 0
+  br label %L1end
+L1false:
+  br label %L3cond
+L3cond:
+  %5 = load i1, i1* %b
+  br i1 %5, label %L3body, label %L3end
+L3body:
+  br label %L3cond
+L3end:
+  %6 = add i32 0, 0
+  br label %L1end
+L1end:
+go  br label %return
+L0end:
+  %7 = add i32 0, 0
+return:
   ret i32 0
 }
+

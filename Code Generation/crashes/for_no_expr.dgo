@@ -1,0 +1,20 @@
+package main;
+
+// PROBLEM WHEN RETURNING AT THE END OF A FOR BLOCK WITH CONDITION
+
+func main() {
+    var b bool;
+    for b{
+        if b{
+            for b{
+
+            }
+        } else{
+            for b {
+                
+            }
+        }
+        return;
+    }
+}
+

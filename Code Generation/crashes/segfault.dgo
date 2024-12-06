@@ -1,0 +1,15 @@
+package main;
+
+func chainA(x int) int {
+    return x + chainB(x * 2);
+}
+
+func chainB(x int) int {
+    return x - chainA(x / 2);
+}
+
+func main() {
+    var result int;
+    result = chainA(10);
+    fmt.Println("Crazy chain result: ");
+}
