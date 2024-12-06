@@ -15,37 +15,43 @@ extern struct scopes_queue *symbol_scopes;
 struct symbol_list *cur_scope;
 int has_returned_branch = 0; // Determines whether to insert "br end" at the end of an if label
 int has_returned_function = 0;
-int in_branch = 0;
+int nested_block_count = 0;
 
-struct block_stack *cur_block_stack = NULL;
+//struct block_stack *cur_block_stack = NULL;
 
 // Stack operations
-int stack_size(struct block_stack *stack){  
-    int size = 0;
-    struct block_stack *cur = stack;
-    while(cur != NULL){
-        size++;
-        cur = cur->next;
-    }
-    return size;
-}
+// int stack_size(struct block_stack *stack){  
+//     int size = 0;
+//     struct block_stack *cur = stack;
+//     while(cur != NULL){
+//         size++;
+//         cur = cur->next;
+//     }
+//     return size;
+// }
 
-void push_block(struct block_stack **stack){
-    struct block_stack *new_block = (struct block_stack *) malloc(sizeof(struct block_stack));
-    new_block->next = *stack;
-    *stack = new_block;
-    return 0;
-}
+// void push_block(struct block_stack **stack){
+//     struct block_stack *new_block = (struct block_stack *) malloc(sizeof(struct block_stack));
+//     new_block->next = *stack;
+//     *stack = new_block;
+//     return 0;
+// }
 
-void clean_block_stack(struct block_stack **stack){
-    struct block_stack *cur = *stack;
-    while(cur != NULL){
-        struct block_stack *next = cur->next;
-        free(cur);
-        cur = next;
-    }
-    *stack = NULL;
-}
+// void pop_block(struct block_stack **stack){
+//     struct block_stack *cur = *stack;
+//     *stack = cur->next;
+//     free(cur);
+// }
+
+// void clean_block_stack(struct block_stack **stack){
+//     struct block_stack *cur = *stack;
+//     while(cur != NULL){
+//         struct block_stack *next = cur->next;
+//         free(cur);
+//         cur = next;
+//     }
+//     *stack = NULL;
+// }
 
 // !!MAYBE USELESS!!
 struct symbol_list *get_scope(char *identifier){
@@ -1043,7 +1049,7 @@ void codegen_return(struct node *return_node){
         return;
     }
 
-    if(!in_branch){
+    if(nested_block_count == 0){
         has_returned_function = 1;
     }
     has_returned_branch = 1;
@@ -1092,9 +1098,9 @@ void codegen_if(struct node *if_node){
     );
 
     has_returned_branch = 0;
-    in_branch = 1;
+    nested_block_count++;
     codegen_statement(if_body);
-    in_branch = 0;
+    nested_block_count--;
 
     // Jump to the end of the if statement
     if(!has_returned_branch){
@@ -1110,9 +1116,9 @@ void codegen_if(struct node *if_node){
     
     //temporary = MAX(label_id + 1, temporary);
     has_returned_branch = 0;
-    in_branch = 1;
+    nested_block_count++;
     codegen_statement(else_body);    
-    in_branch = 0;
+    nested_block_count--;
 
     if(!has_returned_branch){
         printf(
@@ -1144,51 +1150,39 @@ void codegen_for(struct node *for_node){
         for_body = get_child(for_node, 1);
     }
 
-
     int label_id = label_temporary++;
 
+    // Always create condition label
+    printf(
+        "  br label %%L%dcond\n"
+        "L%dcond:\n", label_id, label_id
+    );
 
+    // If no condition provided, use constant true (1)
     if(condition != NULL) {
-        // Evaluate the condition
-        printf(
-            "  br label %%L%dcond\n"
-            "L%dcond:\n", label_id, label_id
-        );
         int cond_temp = codegen_expression(condition);
-        
-        // Branch to the body or the end of the for statement
-        printf(
-            "  br i1 %%%d, label %%L%dbody, label %%L%dend\n"
-            "L%dbody:\n", cond_temp, label_id, label_id, label_id
-        );
+        printf("  br i1 %%%d, label %%L%dbody, label %%L%dend\n", 
+            cond_temp, label_id, label_id);
     } else {
-        // No condition, loop forever
-        printf(
-            "  br label %%L%dbody\n"
-            "L%dbody:\n", label_id, label_id
-        );
+        printf("  br i1 true, label %%L%dbody, label %%L%dend\n",
+            label_id, label_id);
     }
 
-    //has_returned_branch = 0;
-    //in_branch = 1;
+    printf("L%dbody:\n", label_id);
+
+    has_returned_branch = 0;
+    nested_block_count++;
     codegen_statement(for_body);
-    //in_branch = 0;
+    nested_block_count--;
 
-    if(condition != NULL) {
-        // Jump back to the condition
-        printf(
-            "  br label %%L%dcond\n", label_id
-        );
-        printf(
-            "L%dend:\n", label_id
-        );
-    } else {
-        // Jump back to the beginning of the loop body
-        printf(
-            "  br label %%L%dbody\n", label_id
-        );
-        // No end label needed
+    printf("  br label %%L%dcond\n", label_id);
+    // Jump back to condition if no return statement
+    if(!has_returned_branch){
+    printf("L%dend:\n", label_id);
+        printf("  br label %%L%dcond\n", label_id);
     }
+    printf("L%dend:\n", label_id);
+
 }
 
 void codegen_block(struct node *block){
@@ -1303,15 +1297,16 @@ void codegen_function(struct node *function){
     enum type return_type = function_symbol->type;
 
 
+    has_returned_function = 0;
     // Generate the function header
     codegen_func_header(func_header, return_type);
 
     // Generate the function body
     
     // Tools to check if a "br label %return" instruction is needed 
-    clean_block_stack(&cur_block_stack);
-    has_returned_function = 0;
-    cur_block_stack = (struct block_stack *) malloc(sizeof(struct block_stack));
+    // clean_block_stack(&cur_block_stack);
+    // has_returned_function = 0;
+    // cur_block_stack = (struct block_stack *) malloc(sizeof(struct block_stack));
 
     codegen_body(func_body);
 

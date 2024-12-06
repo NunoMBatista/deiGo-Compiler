@@ -4,20 +4,28 @@ package main;
 
 func main() {
     var b bool;
+    //for b{
+    //    if b{
+    //        for b{
+//
+    //        }
+    //    } else{
+    //        for b {
+    //            fmt.Println(1);
+    //        }
+    //    }
+    //    return;
+    //}
+
+
     for b{
-        if b{
-            for b{
+        if 1==2{
+            for {
+                return;
+            }
 
-            }
-        } else{
-            for b {
-                
-            }
         }
-        return;
     }
-
-    //fmt.Println(1);
 }
 
 // OPTCODE PROBLEMS HAS_RETURNED_BRANCH CANNOT BE GLOBAL
