@@ -17,6 +17,37 @@ int has_returned_branch = 0; // Determines whether to insert "br end" at the end
 int has_returned_function = 0;
 int in_branch = 0;
 
+struct block_stack *cur_block_stack = NULL;
+
+// Stack operations
+int stack_size(struct block_stack *stack){  
+    int size = 0;
+    struct block_stack *cur = stack;
+    while(cur != NULL){
+        size++;
+        cur = cur->next;
+    }
+    return size;
+}
+
+void push_block(struct block_stack **stack){
+    struct block_stack *new_block = (struct block_stack *) malloc(sizeof(struct block_stack));
+    new_block->next = *stack;
+    *stack = new_block;
+    return 0;
+}
+
+void clean_block_stack(struct block_stack **stack){
+    struct block_stack *cur = *stack;
+    while(cur != NULL){
+        struct block_stack *next = cur->next;
+        free(cur);
+        cur = next;
+    }
+    *stack = NULL;
+}
+
+// !!MAYBE USELESS!!
 struct symbol_list *get_scope(char *identifier){
     struct scopes_queue *cur_scope = symbol_scopes;
     while(cur_scope != NULL){
@@ -1276,27 +1307,14 @@ void codegen_function(struct node *function){
     codegen_func_header(func_header, return_type);
 
     // Generate the function body
+    
+    // Tools to check if a "br label %return" instruction is needed 
+    clean_block_stack(&cur_block_stack);
     has_returned_function = 0;
+    cur_block_stack = (struct block_stack *) malloc(sizeof(struct block_stack));
+
     codegen_body(func_body);
 
-    //// Generate the function footer (add a default return statement)
-    //printf("  ret %s", llvm_types(return_type));
-    //switch(return_type){
-    //    case integer:
-    //        printf(" 0\n");
-    //        break;
-    //    case float32:
-    //        printf(" 0.0\n");
-    //        break;
-    //    case bool:
-    //        printf(" false\n");
-    //        break;
-    //    case string:
-    //        printf(" null\n");
-    //        break;
-    //    default:
-    //        printf("\n");
-    //}
 
     // Go to return label
     if(!has_returned_function){
@@ -1304,8 +1322,6 @@ void codegen_function(struct node *function){
             "  br label %%return\n"
         );
     }
-    
-    //temporary++;
 
     // Return label
     printf("return:\n");

@@ -4,6 +4,25 @@
 #include "ast.h"
 #include "semantics.h"
 
+/*
+TODO:
+
+We need to keep track of an has_returned_branch variable for
+EVERY branch in order to add "br label %return%" at the end 
+of the L0 branch 
+
+Maybe keep a dynamic stack with a node per nested branch
+we only set has_returned_function to 1 if the stack is empty
+and a return instruction is called 
+*/
+struct block_stack {
+    struct block_stack *next;
+};
+
+int stack_size(struct block_stack *stack);
+void push_block(struct block_stack **stack);
+void clean_block_stack(struct block_stack **stack);
+
 char* llvm_types(enum type type);
 
 void codegen_program(struct node *program);
