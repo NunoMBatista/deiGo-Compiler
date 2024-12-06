@@ -1,32 +1,35 @@
 package main;
 
-func testIfElseIf() {
+// PROBLEM WHEN RETURNING AT THE END OF A FOR BLOCK WITH CONDITION
+
+func main() {
     var b bool;
-    
+    for b{}
     //for b{
-    //    if b {
-    //        
-    //    } else { 
-    //        if b {
-    //            for b {
-    //                if b {
-    //                    for b {
+    //    if b{
+    //        for b{
 //
-    //                    }
-    //                } else{
-    //                    for b{
-//
-    //                    }
-    //                }
-    //            } 
+    //        }
+    //    } else{
+    //        for b {
+    //            fmt.Println(1);
     //        }
     //    }
+    //    return;
     //}
 
 
+    for b{
+        if 1==2{
+            for {
+                return;
+            }
+            //fmt.Println("qq");
 
+        }
+    }
 }
 
-func main() {
-    testIfElseIf();
-}
+// OPTCODE PROBLEMS HAS_RETURNED_BRANCH CANNOT BE GLOBAL
+// AS NESTED BLOCKS MIGHT TELL INCORRECTLY THEIR PARENTS THAT THEY
+// HAVE RETURNED

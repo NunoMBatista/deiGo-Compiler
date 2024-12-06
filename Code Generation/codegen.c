@@ -14,7 +14,7 @@ extern struct symbol_list *symbol_table;
 extern struct scopes_queue *symbol_scopes;
 struct symbol_list *cur_scope;
 int has_returned_branch = 0; // Determines whether to insert "br end" at the end of an if label
-int has_returned_function = 0;
+//int has_returned_function = 0;
 int nested_block_count = 0;
 
 //struct block_stack *cur_block_stack = NULL;
@@ -145,7 +145,7 @@ void codegen_func_header(struct node *func_header, enum type return_type){
     
 
     // Generate the function header label
-    printf("L0:\n");
+    printf(".label0:\n");
     // Initialize the function's return register
     if(return_type != none){
         printf(
@@ -157,6 +157,7 @@ void codegen_func_header(struct node *func_header, enum type return_type){
             "  %%0 = alloca i32\n" // PLACEHOLDER FOR VOID RETURN
         );
     }
+    label_temporary = 1;
 
 
     // Create local variables for parameters to allow assignments
@@ -1049,17 +1050,9 @@ void codegen_return(struct node *return_node){
         return;
     }
 
-    if(nested_block_count == 0){
-        has_returned_function = 1;
-    }
-    has_returned_branch = 1;
-
     struct node *expression = get_child(return_node, 0);
 
     int expr_temp = codegen_expression(expression);
-    // printf(
-    //     "  ret %s %%%d\n", llvm_types(expression->type), expr_temp
-    // );
 
     if(expression != NULL){
         printf(
@@ -1069,131 +1062,126 @@ void codegen_return(struct node *return_node){
     }
 
     // Jump to return label
-    printf(
-        "  br label %%return\n"
-    );
-    //temporary++;
-
+    printf("  br label %%return\n");
 }
 
-void codegen_if(struct node *if_node){
-    if(if_node == NULL){
+void codegen_if(struct node *if_node, int *has_returned_basic_block) {
+    if (if_node == NULL || *has_returned_basic_block) {
         return;
     }
+
+    // JUST GET THE BASIC BLOCKS
 
     struct node *condition = get_child(if_node, 0);
     struct node *if_body = get_child(if_node, 1);
     struct node *else_body = get_child(if_node, 2);
 
-
-    // Create labels for the if statement
     int cond_temp = codegen_expression(condition);
-    
-    int label_id = label_temporary++;
 
-    // Branch to the if or else body
-    printf(
-        "  br i1 %%%d, label %%L%dtrue, label %%L%dfalse\n"
-        "L%dtrue:\n", cond_temp, label_id, label_id, label_id
-    );
+    int true_label = label_temporary++;
+    int false_label = label_temporary++;
+    int merge_label = label_temporary++;
 
-    has_returned_branch = 0;
-    nested_block_count++;
-    codegen_statement(if_body);
-    nested_block_count--;
+    // Branch based on the condition
+    printf("  br i1 %%%d, label %%.label%d, label %%.label%d\n", cond_temp, true_label, false_label);
 
-    // Jump to the end of the if statement
-    if(!has_returned_branch){
-        printf(
-            "  br label %%L%dend\n", 
-            label_id
-        );
-    }
-    printf(
-        "L%dfalse:\n", 
-        label_id
-    );
-    
-    //temporary = MAX(label_id + 1, temporary);
-    has_returned_branch = 0;
-    nested_block_count++;
-    codegen_statement(else_body);    
-    nested_block_count--;
+    // True block
+    printf(".label%d:\n", true_label);
+    int has_returned_true = 0;
 
-    if(!has_returned_branch){
-        printf(
-            "  br label %%L%dend\n", 
-            label_id
-        );
+    codegen_statement(if_body, &has_returned_true);
+
+    if(!has_returned_true){
+        printf("  br label %%.label%d\n", merge_label);
     }
 
-    // End of the if statement
-    printf(
-        "L%dend:\n", label_id
-    );
-    //temporary = MAX(label_id + 2, temporary);
+    // False block
+    printf(".label%d:\n", false_label);
+    int has_returned_false = 0;
+
+    if (else_body != NULL) {
+        codegen_statement(else_body, &has_returned_false);
+    }
+
+    if(!has_returned_false){
+        printf("  br label %%.label%d\n", merge_label);
+    }
+
+    // Merge block
+    if(!has_returned_true || !has_returned_false){
+        printf(".label%d:\n", merge_label);
+    }
+
+    if(has_returned_true && has_returned_false){
+        *has_returned_basic_block = 1; // Both branches returned
+    }
 }
 
-void codegen_for(struct node *for_node){
-    if(for_node == NULL){
+void codegen_for(struct node *for_node, int *has_returned_basic_block) {
+    if (for_node == NULL || *has_returned_basic_block) {
         return;
     }
 
-    struct node *for_body = NULL;
     struct node *condition = NULL;
-    // There is no condition, just a block
-    if(block_elements(for_node) == 1){
+    struct node *for_body = NULL;
+
+    if (block_elements(for_node) == 1) {
         for_body = get_child(for_node, 0);
-    }
-    else{
-        condition = get_child(for_node, 0);    
+    } else {
+        condition = get_child(for_node, 0);
         for_body = get_child(for_node, 1);
     }
 
-    int label_id = label_temporary++;
+    int cond_label = label_temporary++;
+    int body_label = label_temporary++;
+    int merge_label = label_temporary++;
 
-    // Always create condition label
-    printf(
-        "  br label %%L%dcond\n"
-        "L%dcond:\n", label_id, label_id
-    );
+    // Initial branch to condition or directly to body if no condition
+    printf("  br label %%.label%d\n", cond_label);
 
-    // If no condition provided, use constant true (1)
-    if(condition != NULL) {
+    // Condition block
+    printf(".label%d:\n", cond_label);
+    if (condition != NULL) {
         int cond_temp = codegen_expression(condition);
-        printf("  br i1 %%%d, label %%L%dbody, label %%L%dend\n", 
-            cond_temp, label_id, label_id);
+        printf("  br i1 %%%d, label %%.label%d, label %%.label%d\n", cond_temp, body_label, merge_label);
     } else {
-        printf("  br i1 true, label %%L%dbody, label %%L%dend\n",
-            label_id, label_id);
+        // If no condition, always branch to body
+        printf("  br label %%.label%d\n", body_label);
     }
 
-    printf("L%dbody:\n", label_id);
+    // Body block
+    printf(".label%d:\n", body_label);
+    int has_returned_body = 0;
 
-    has_returned_branch = 0;
-    nested_block_count++;
-    codegen_statement(for_body);
-    nested_block_count--;
+    codegen_statement(for_body, &has_returned_body);
 
-    printf("  br label %%L%dcond\n", label_id);
-    // Jump back to condition if no return statement
-    if(!has_returned_branch){
-    printf("L%dend:\n", label_id);
-        printf("  br label %%L%dcond\n", label_id);
+    if(!has_returned_body){
+        // Branch back to condition
+        printf("  br label %%.label%d\n", cond_label);
     }
-    printf("L%dend:\n", label_id);
 
+    // Merge block
+    if(!has_returned_body){
+        printf(".label%d:\n", merge_label);
+    }
+
+    if(has_returned_body){
+        *has_returned_basic_block = 1; // The loop body has returned
+    }
 }
 
-void codegen_block(struct node *block){
-    if(block == NULL){
+void codegen_block(struct node *block, int *has_returned_basic_block){
+    if(block == NULL || *has_returned_basic_block){
         return;
     }
 
     struct node_list *cur_child = block->children;
     while((cur_child = cur_child->next) != NULL){
+        if(*has_returned_basic_block){
+            break; // Skip code generation after return
+        }
         struct node *cur_node = cur_child->node;
-        codegen_statement(cur_node);
+        codegen_statement(cur_node, has_returned_basic_block);
     }
 }
 
@@ -1227,8 +1215,8 @@ void codegen_parse_args(struct node *parse_args){
     return;
 }
 
-int codegen_statement(struct node *statement){
-    if(statement == NULL){
+int codegen_statement(struct node *statement, int *has_returned_basic_block){
+    if(statement == NULL || *has_returned_basic_block){
         return temporary;
     }
 
@@ -1238,19 +1226,20 @@ int codegen_statement(struct node *statement){
             codegen_assign(statement);
             break;
         case If:
-            codegen_if(statement);
+            codegen_if(statement, has_returned_basic_block);
             break;
         case For:
-            codegen_for(statement);
+            codegen_for(statement, has_returned_basic_block);
             break;
         case Return:
             codegen_return(statement);
+            *has_returned_basic_block = 1; // Set return flag for this block
             break;
         case Call:
             codegen_call(statement, 0);
             break;
         case Block:
-            codegen_block(statement);
+            codegen_block(statement, has_returned_basic_block);
             break;
         case Print:
             codegen_print(statement);
@@ -1265,21 +1254,23 @@ int codegen_statement(struct node *statement){
     return temporary; 
 }
 
-void codegen_body(struct node *func_body){
+void codegen_body(struct node *func_body, int *has_returned_basic_block){
     if(func_body == NULL){
         return;
     }
 
     struct node_list *cur_child = func_body->children;
     while((cur_child = cur_child->next) != NULL){
+        if(*has_returned_basic_block){
+            break;
+        }
         struct node *cur_node = cur_child->node; 
 
-        // There are only VarDecl and Statements in the function body
         if(cur_node->category == VarDecl){
             codegen_var_decl(cur_node);
         }
         else{
-            codegen_statement(cur_node);
+            codegen_statement(cur_node, has_returned_basic_block);
         }
     }
 }
@@ -1297,7 +1288,7 @@ void codegen_function(struct node *function){
     enum type return_type = function_symbol->type;
 
 
-    has_returned_function = 0;
+    // has_returned_function = 0;
     // Generate the function header
     codegen_func_header(func_header, return_type);
 
@@ -1308,15 +1299,22 @@ void codegen_function(struct node *function){
     // has_returned_function = 0;
     // cur_block_stack = (struct block_stack *) malloc(sizeof(struct block_stack));
 
-    codegen_body(func_body);
+    int has_returned_basic_block = 0; // Track if the last block has a return
 
+    // Generate the function body and pass the flag
+    codegen_body(func_body, &has_returned_basic_block);
 
-    // Go to return label
-    if(!has_returned_function){
+    // If the last basic block did not return, insert branch to return label
+    if(!has_returned_basic_block){
         printf(
-            "  br label %%return\n"
+            "  br label %%.label%d\n", label_temporary
         );
     }
+    printf(
+        ".label%d:\n"
+        "  br label %%return\n",
+        label_temporary
+    );
 
     // Return label
     printf("return:\n");
@@ -1376,7 +1374,7 @@ void codegen_main(struct node *main){
     }
 
     struct node *func_body = get_child(main, 1);
-    temporary = 1;
+    temporary = 0;
     // Generate the function header
     //codegen_func_header(func_header, none);
     cur_scope = (struct symbol_list *) malloc(sizeof(struct symbol_list));
@@ -1385,18 +1383,27 @@ void codegen_main(struct node *main){
 
     printf(
         "define i32 @main() {\n"
+        ".label%d:\n", label_temporary++
     );
 
     // Generate the function body
-    has_returned_function = 0;
-    codegen_body(func_body);
+    //has_returned_function = 0;
+    int has_returned_basic_block = 0; // Track if the last block has a return
 
-    // Go to return label
-    if(!has_returned_function){
+    // Generate the function body and pass the flag
+    codegen_body(func_body, &has_returned_basic_block);
+
+    // If the last basic block did not return, insert branch to return label
+    if(!has_returned_basic_block){
         printf(
-            "  br label %%return\n"
+            "  br label %%.label%d\n", label_temporary
         );
     }
+    printf(
+        ".label%d:\n"
+        "  br label %%return\n",
+        label_temporary
+    );
 
     // Return label
     printf("return:\n");
@@ -1416,14 +1423,14 @@ void codegen_program(struct node *program){
 
     // Declare printf function
     printf(
-        "declare i32 @atoi(i8*)\n"
-        "declare i32 @printf(i8*, ...)\n"
         "@.str_int = private constant [4 x i8] c\"%%d\\0A\\00\"\n"
         "@.str_float = private constant [7 x i8] c\"%%.08F\\0A\\00\"\n"
         "@.str_true = private constant [6 x i8] c\"true\\0A\\00\"\n"
         "@.str_false = private constant [7 x i8] c\"false\\0A\\00\"\n"
         "@.str_string = private constant [4 x i8] c\"%%s\\0A\\00\"\n"
-        "@.empty_str = private constant [1 x i8] c\"\\00\"\n"
+        "@.empty_str = private constant [1 x i8] c\"\\00\"\n\n"
+        "declare i32 @atoi(i8*)\n"
+        "declare i32 @printf(i8*, ...)\n"
         "\n\n"
     );
 

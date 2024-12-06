@@ -4,28 +4,68 @@ package main;
 
 func main() {
     var b bool;
-    //for b{
-    //    if b{
-    //        for b{
-//
-    //        }
-    //    } else{
-    //        for b {
-    //            fmt.Println(1);
-    //        }
-    //    }
-    //    return;
-    //}
+    for b{}
+
+    if b{
+        if b {
+            if b {
+
+            }
+        }
+    }
+
+    for {
+        return;
+        if b{
+            for b{
+                
+            }
+        } else{
+            for  {
+                fmt.Println(1);
+            }
+        }
+        return;
+        for {
+
+        }
+        for{
+
+        }
+
+        if b{
+            return;
+        }
+        if b{
+            return;
+        } else { return;
+            for {
+                for{
+                    for {
+                        return;
+                    }
+                }
+            }
+        }
+        return;
+    }
 
 
     for b{
         if 1==2{
+            return;
+
             for {
-                return;
+                //return;
             }
+            //fmt.Println("qq");
 
         }
+
+     return;   
     }
+
+    return;
 }
 
 // OPTCODE PROBLEMS HAS_RETURNED_BRANCH CANNOT BE GLOBAL
