@@ -397,12 +397,41 @@ char* process_escape_sequences(const char* input, size_t* final_len) {
         if(input[i] == '\\') {
             i++; // Skip backslash
             switch(input[i]) {
-                case 'n': case 't': case 'f': 
-                case 'r': case '\\': case '"':
+                case 'n':
                     output[j++] = '\\';
-                    output[j++] = '0';
+                    output[j++] = '0'; // newline
+                    output[j++] = 'A';
+                    real_len++;
+                    break;
+                case 't':
+                    output[j++] = '\\';
+                    output[j++] = '0'; // tab
                     output[j++] = '9';
-                    real_len++; // Count as one character
+                    real_len++;
+                    break;
+                case 'f':
+                    output[j++] = '\\';
+                    output[j++] = '0'; // form feed
+                    output[j++] = 'C';
+                    real_len++;
+                    break;
+                case 'r':
+                    output[j++] = '\\';
+                    output[j++] = '0'; // carriage return
+                    output[j++] = 'D';
+                    real_len++;
+                    break;
+                case '\\':
+                    output[j++] = '\\';
+                    output[j++] = '5'; // backslash
+                    output[j++] = 'C';
+                    real_len++;
+                    break;
+                case '"':
+                    output[j++] = '\\';
+                    output[j++] = '2'; // quote
+                    output[j++] = '2';
+                    real_len++;
                     break;
                 default:
                     output[j++] = input[i];

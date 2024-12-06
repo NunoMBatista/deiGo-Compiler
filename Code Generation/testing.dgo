@@ -1,27 +1,24 @@
 package main;
 
 func fcj () int {
-	var xint, x1int, x2int int;
-	var xbool bool;
-	var xfloat float32;
 
-	xint = 1;
+    if 1 == 2 {
+        for 1 == 2 {
+            for 1 == 2 {
+                if 1 == 1 {
+                    if 1 == 1{
+                        if 1 == 1 {
 
-	x1int = 2;
-
-    if x1int > 1 {
-        if x2int > -1 {
-            xfloat = .01;
-        } else {
-            if xbool {
-            	for xint < 10 {
-                    xint = xint+1;
-				}
+                        } else {
+                            fmt.Println("LEGRWI");
+                        }
+                    }
+                }
             }
         }
+    } else{
+        fmt.Println("l\n\nlooll\n\n");
     }
-   
-    return -101;
 }
 
 func main() {
