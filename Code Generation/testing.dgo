@@ -14,22 +14,8 @@ func main() {
         fmt.Println(i);
         b1 = b2 && b3;
     
-      //  if (b1 == b2) || b3{
-      //      
-      //      if (b1 == b2) || b3{
-      //      }
-      //  }
-
         b3 = (b1 == b2) || b3
         b1 = !(b1 == b2) && !b3 || i > 22 && b1
-
-        //if !(b1 == b2) && !b3 || i > 22 && b1 {
-        //    fmt.Println(b2);
-        //}
-
-      //  if !(b1 == b2) && !b3 || i > 22 && b1{
-      //      fmt.Println(b2);
-      //  }
 
         i = i+1
     }
