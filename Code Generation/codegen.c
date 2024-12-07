@@ -801,13 +801,13 @@ int codegen_minus(struct node *minus){
     int expr_temp = codegen_expression(expression);
 
     if(expression->type == float32){
-        printf(
-           "  %%%d = fsub double 0.0, %%%d\n", temporary, expr_temp
-        );
-        
         // printf(
-        //     "  %%%d = fneg double %%%d\n", temporary, expr_temp
+        //    "  %%%d = fsub double 0.0, %%%d\n", temporary, expr_temp
         // );
+        
+        printf(
+            "  %%%d = fneg double %%%d\n", temporary, expr_temp
+        );
     }
     else{
         printf(
