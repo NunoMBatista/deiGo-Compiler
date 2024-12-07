@@ -412,8 +412,11 @@ int codegen_decimal(struct node *decimal){
         return 0;
     }
 
+    // char *a = NULL;
+
     // Handle tokens starting with a dot
     if(decimal->token[0] == '.'){
+        // RUNTIME B -> printf("%s\n", a);
         char *new_decimal = malloc(strlen(decimal->token) + 2);
         sprintf(new_decimal, "0%s", decimal->token);
         // Replace the original token with the new token
@@ -429,6 +432,7 @@ int codegen_decimal(struct node *decimal){
     }
     // If there is no point, add one to the left of the E/e
     if(point == NULL && e != NULL){
+        // RUNTIME B -> printf("%s\n", a);
         char *new_decimal = malloc(strlen(decimal->token) + 2);
         int e_index = e - decimal->token;
         strncpy(new_decimal, decimal->token, e_index);
@@ -542,23 +546,29 @@ int codegen_or(struct node *or_node) {
     int label_id = label_temporary++;
 
     // Allocate space for the result
-    printf("  %%%d = alloca i1\n", temporary);
-    int result_addr = temporary++;
+    // printf("  %%%d = alloca i1\n", temporary); 
+    printf("  store i1 false, i1* @logic_result\n");
+
+    //int result_addr = temporary++;
+    // Put the left expression value in the result address
 
     // If left is true, store true and jump to end
     printf("  br i1 %%%d, label %%L%d_true, label %%L%d_false\n", left_temp, label_id, label_id);
 
     printf("L%d_true:\n", label_id);
-    printf("  store i1 true, i1* %%%d\n", result_addr);
+    //printf("  store i1 true, i1* %%%d\n", result_addr);
+    printf("  store i1 true, i1* @logic_result\n");
     printf("  br label %%L%d_end\n", label_id);
 
     printf("L%d_false:\n", label_id);
     int right_temp = codegen_expression(right);
-    printf("  store i1 %%%d, i1* %%%d\n", right_temp, result_addr);
+    //printf("  store i1 %%%d, i1* %%%d\n", right_temp, result_addr);
+    printf("  store i1 %%%d, i1* @logic_result\n", right_temp);
     printf("  br label %%L%d_end\n", label_id);
 
     printf("L%d_end:\n", label_id);
-    printf("  %%%d = load i1, i1* %%%d\n", temporary, result_addr);
+    //printf("  %%%d = load i1, i1* %%%d\n", temporary, result_addr);
+    printf("  %%%d = load i1, i1* @logic_result\n", temporary);
 
     return temporary++;
 }
@@ -575,24 +585,30 @@ int codegen_and(struct node *and_node) {
     int left_temp = codegen_expression(left);
     int label_id = label_temporary++;
 
+    // Store the result in a global variable
+    printf("  store i1 false, i1* @logic_result\n");
+
     // Allocate space for the result
-    printf("  %%%d = alloca i1\n", temporary);
-    int result_addr = temporary++;
+    //printf("  %%%d = alloca i1\n", temporary);
+    //int result_addr = temporary++;
 
     // If left is false, store false and jump to end
     printf("  br i1 %%%d, label %%L%d_true, label %%L%d_false\n", left_temp, label_id, label_id);
 
     printf("L%d_true:\n", label_id);
     int right_temp = codegen_expression(right);
-    printf("  store i1 %%%d, i1* %%%d\n", right_temp, result_addr);
+    //printf("  store i1 %%%d, i1* %%%d\n", right_temp, result_addr);
+    printf("  store i1 %%%d, i1* @logic_result\n", right_temp);
     printf("  br label %%L%d_end\n", label_id);
 
     printf("L%d_false:\n", label_id);
-    printf("  store i1 false, i1* %%%d\n", result_addr);
+    //printf("  store i1 false, i1* %%%d\n", result_addr);
+    printf("  store i1 false, i1* @logic_result\n");
     printf("  br label %%L%d_end\n", label_id);
 
     printf("L%d_end:\n", label_id);
-    printf("  %%%d = load i1, i1* %%%d\n", temporary, result_addr);
+    //printf("  %%%d = load i1, i1* %%%d\n", temporary, result_addr);
+    printf("  %%%d = load i1, i1* @logic_result\n", temporary);
 
     return temporary++;
 }
@@ -786,8 +802,12 @@ int codegen_minus(struct node *minus){
 
     if(expression->type == float32){
         printf(
-            "  %%%d = fsub double 0.0, %%%d\n", temporary, expr_temp
+           "  %%%d = fsub double 0.0, %%%d\n", temporary, expr_temp
         );
+        
+        // printf(
+        //     "  %%%d = fneg double %%%d\n", temporary, expr_temp
+        // );
     }
     else{
         printf(
@@ -1454,14 +1474,15 @@ void codegen_program(struct node *program){
 
     // Declare printf function
     printf(
-        "@.str_int = private constant [4 x i8] c\"%%d\\0A\\00\"\n"
-        "@.str_float = private constant [7 x i8] c\"%%.08F\\0A\\00\"\n"
-        "@.str_true = private constant [6 x i8] c\"true\\0A\\00\"\n"
-        "@.str_false = private constant [7 x i8] c\"false\\0A\\00\"\n"
-        "@.str_string = private constant [4 x i8] c\"%%s\\0A\\00\"\n"
-        "@.empty_str = private constant [1 x i8] c\"\\00\"\n\n"
+        "@.str_int = private unnamed_addr constant [4 x i8] c\"%%d\\0A\\00\"\n"
+        "@.str_float = private unnamed_addr constant [7 x i8] c\"%%.08F\\0A\\00\"\n"
+        "@.str_true = private unnamed_addr constant [6 x i8] c\"true\\0A\\00\"\n"
+        "@.str_false = private unnamed_addr constant [7 x i8] c\"false\\0A\\00\"\n"
+        "@.str_string = private unnamed_addr constant [4 x i8] c\"%%s\\0A\\00\"\n"
+        "@.empty_str = private unnamed_addr constant [1 x i8] c\"\\00\"\n\n"
         "declare i32 @atoi(i8*)\n"
         "declare i32 @printf(i8*, ...)\n"
+        "@logic_result = global i1 false\n\n"
         "\n\n"
     );
 
