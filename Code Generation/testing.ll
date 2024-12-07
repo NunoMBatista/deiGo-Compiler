@@ -40,7 +40,7 @@ define i32 @main(i32 %argc, i8** %argv) {
   %16 = sub i32 0, %15
   call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str_int, i32 0, i32 0), i32 %16)
   %18 = fadd double 0.00, 0.0
-  %19 = fsub double 0.0, %18
+  %19 = fsub double -0.0, %18
   call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str_float, i32 0, i32 0), double %19)
   %21 = alloca [10 x i8]
   store [10 x i8] c"sdjfhighi\00", [10 x i8]* %21
