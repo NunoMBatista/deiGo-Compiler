@@ -1,3 +1,6 @@
+
+package main; 
+
 func factorial(n int) int {
     if n <= 1 {
         return 1;
@@ -11,7 +14,10 @@ func main() {
     b = factorial(3);   // 6
     c = factorial(7);   // 5040
 
-    result = (((a * b) / c) + 5 * (2) - (b * a / (c + 1))) * (a - b) / (c % b) + ((a + c) % b);
+z
+    
+    result = 1 / (c % b);
+    //result = (120 - 6) / (5040 % 6);
     fmt.Println(result);
 
     if result == 0 {

@@ -1,3 +1,8 @@
+// EXPECTED TO CRASH - STACK OVERFLOW
+
+
+
+
 package main;
 
 func chainA(x int) int {

@@ -285,7 +285,7 @@ int codegen_natural(struct node *natural_node){
     }
 
     printf(
-        "  %%%d = add i32 %s, 0\n", temporary, natural_node->token
+        "  %%%d = add i32 %d, 0\n", temporary, value
     );
 
     return temporary++;
@@ -412,24 +412,33 @@ int codegen_decimal(struct node *decimal){
         return 0;
     }
 
-    // Handle scientific notation
-    char *e = strchr(decimal->token, 'e');
-    if(e != NULL){
-        double value;
-        sscanf(decimal->token, "%lf", &value);
-        printf("  %%%d = fadd double %lf, 0.0\n", temporary, value);
+    // Handle tokens starting with a dot
+    if(decimal->token[0] == '.'){
+        char *new_decimal = malloc(strlen(decimal->token) + 2);
+        sprintf(new_decimal, "0%s", decimal->token);
+        // Replace the original token with the new token
+        free(decimal->token);
+        decimal->token = new_decimal;
     }
-    else {
-        // Handle numbers starting with a period (prepend a 0)
-        char *num = decimal->token;
-        if(num[0] == '.') {
-            char *fixed_num = malloc(strlen(num) + 2);
-            sprintf(fixed_num, "0%s", num);
-            printf("  %%%d = fadd double %s, 0.0\n", temporary, fixed_num);
-            free(fixed_num);
-        } else {
-            printf("  %%%d = fadd double %s, 0.0\n", temporary, num);
-        }
+
+    // Check if there is a . on the left side of the E/e, if not, add a . to the left side of the E/e
+    char *point = strchr(decimal->token, '.');
+    char *e = strchr(decimal->token, 'e');
+    if(e == NULL){
+        e = strchr(decimal->token, 'E');
+    }
+    // If there is no point, add one to the left of the E/e
+    if(point == NULL && e != NULL){
+        char *new_decimal = malloc(strlen(decimal->token) + 2);
+        int e_index = e - decimal->token;
+        strncpy(new_decimal, decimal->token, e_index);
+        new_decimal[e_index] = '.';
+        strcpy(new_decimal + e_index + 1, e);
+        printf("  %%%d = fadd double %s, 0.0\n", temporary, new_decimal);
+        free(new_decimal);
+    }
+    else{
+        printf("  %%%d = fadd double %s, 0.0\n", temporary, decimal->token);
     }
 
     return temporary++;
@@ -1190,29 +1199,52 @@ void codegen_parse_args(struct node *parse_args){
         return;
     }
 
-    // Use atoi turn right string to left int
     struct node *left = get_child(parse_args, 0);
     struct node *right = get_child(parse_args, 1);
 
     int right_temp = codegen_expression(right);
 
-    if(right->type == integer){
-        printf(
-            "  store i32 %%%d, i32* %%%s\n", right_temp, left->token
-        );
-    }
-    else{
-        printf(
-            "  %%%d = call i32 @atoi(i8* %%%d)\n", temporary, right_temp
-        );
+    // Determine variable type (local, parameter, or global)
+    struct symbol_list *symbol = search_symbol(cur_scope, left->token);
 
-        printf(
-            "  store i32 %%%d, i32* %%%s\n", temporary, left->token
-        );
+    // If not in current scope, check global scope
+    if(symbol == NULL){
+        symbol = search_symbol(symbol_table, left->token);
+        if(symbol != NULL){
+            // Global variable
+            if(right->type == integer){
+                printf("  store i32 %%%d, i32* @%s\n", right_temp, left->token);
+            }
+            else{
+                printf("  %%%d = call i32 @atoi(i8* %%%d)\n", temporary, right_temp);
+                printf("  store i32 %%%d, i32* @%s\n", temporary, left->token);
+                temporary++;
+            }
+        }
+        return;
     }
 
-    //temporary++;
-    return;
+    if(symbol->is_parameter){
+        // For parameters, store to the local address variable
+        if(right->type == integer){
+            printf("  store i32 %%%d, i32* %%%s.addr\n", right_temp, left->token);
+        }
+        else{
+            printf("  %%%d = call i32 @atoi(i8* %%%d)\n", temporary, right_temp);
+            printf("  store i32 %%%d, i32* %%%s.addr\n", temporary, left->token);
+            temporary++;
+        }
+    } else {
+        // Local variable
+        if(right->type == integer){
+            printf("  store i32 %%%d, i32* %%%s\n", right_temp, left->token);
+        }
+        else{
+            printf("  %%%d = call i32 @atoi(i8* %%%d)\n", temporary, right_temp);
+            printf("  store i32 %%%d, i32* %%%s\n", temporary, left->token);
+            temporary++;
+        }
+    }
 }
 
 int codegen_statement(struct node *statement, int *has_returned_basic_block){
@@ -1382,9 +1414,11 @@ void codegen_main(struct node *main){
     cur_scope->next = NULL;
 
     printf(
-        "define i32 @main() {\n"
+        "define i32 @main(i32 %%argc, i8** %%argv) {\n"
         ".label%d:\n", label_temporary++
     );
+
+
 
     // Generate the function body
     //has_returned_function = 0;

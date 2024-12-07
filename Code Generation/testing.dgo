@@ -2,32 +2,46 @@ package main;
 
 // PROBLEM WHEN RETURNING AT THE END OF A FOR BLOCK WITH CONDITION
 
+var a int;
+var b float32; 
+var c bool;
+var d string; 
+
 func main() {
-    var b bool;
-    for b{}
-    //for b{
-    //    if b{
-    //        for b{
-//
-    //        }
-    //    } else{
-    //        for b {
-    //            fmt.Println(1);
-    //        }
-    //    }
-    //    return;
-    //}
+    fmt.Println("Lebroin");
+
+    fmt.Println(a)
+    fmt.Println(b)
+    fmt.Println(c)
+    fmt.Println(d)
+
+    a = 0x12
+    //b = 0.2E-1 / 12.3
+    b = 1.23e-4
+    b = -253E-3
+    b = -.1
+    b = .113E11111111
+    c = 1!=2
+    a = +3 + 4
+    c = !(c && !c) || (c != !c)
+
+    fmt.Println(a)
+    fmt.Println(b)
+    fmt.Println(c)
+    fmt.Println(d)
+
+    fmt.Println("\t\ra\f")
+    fmt.Println("\t\rb\f")
+    fmt.Println("\t\rc\f")
+    fmt.Println("\t\rd\f")
+
+    fmt.Println("\"\\videojogar\f jogo de video\r videojog")
+    fmt.Println("\"\\videojogar\f jogo de video\r videojog")
+    fmt.Println("\"\\videojogar\f jogo de video\r videojog")
+    fmt.Println("\"\\videojogar\f jogo de video\r videojog")
 
 
-    for b{
-        if 1==2{
-            for {
-                return;
-            }
-            //fmt.Println("qq");
 
-        }
-    }
 }
 
 // OPTCODE PROBLEMS HAS_RETURNED_BRANCH CANNOT BE GLOBAL

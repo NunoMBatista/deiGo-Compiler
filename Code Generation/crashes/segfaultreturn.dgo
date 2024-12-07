@@ -1,3 +1,9 @@
+// EXPECTED TO CRASH (STACK OVERFLOW)
+
+
+
+
+
 package main;
 
 func first(a int) int {

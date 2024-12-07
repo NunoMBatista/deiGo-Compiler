@@ -25,3 +25,8 @@ and a return instruction is called
 ###########################################################
 
 DON'T FORGET TO ALSO ADD THE STACK OPERATIONS IN codegen_main()
+
+###########################################################
+
+WRONG ANSWER ON B IS LIKELY DUE TO SPECIAL NOTATIONS FOR NATURALS
+AND DECIMALS
