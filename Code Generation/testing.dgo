@@ -2,46 +2,37 @@ package main;
 
 // PROBLEM WHEN RETURNING AT THE END OF A FOR BLOCK WITH CONDITION
 
-var a int;
-var b float32; 
-var c bool;
-var d string; 
-
-func main() {
-    fmt.Println("Lebroin");
-
-    fmt.Println(a)
-    fmt.Println(b)
-    fmt.Println(c)
-    fmt.Println(d)
-
-    a = 0x12
-    //b = 0.2E-1 / 12.3
-    b = 1.23e-4
-    b = -253E-3
-    b = -.1
-    b = .113E11111111
-    c = 1!=2
-    a = +3 + 4
-    c = !(c && !c) || (c != !c)
-
-    fmt.Println(a)
-    fmt.Println(b)
-    fmt.Println(c)
-    fmt.Println(d)
-
-    fmt.Println("\t\ra\f")
-    fmt.Println("\t\rb\f")
-    fmt.Println("\t\rc\f")
-    fmt.Println("\t\rd\f")
-
-    fmt.Println("\"\\videojogar\f jogo de video\r videojog")
-    fmt.Println("\"\\videojogar\f jogo de video\r videojog")
-    fmt.Println("\"\\videojogar\f jogo de video\r videojog")
-    fmt.Println("\"\\videojogar\f jogo de video\r videojog")
 
 
+func main() { 
+    var i int;
+    var b1, b2, b3 bool;
+    i = 1    
+    
+    b3 = 1==1;
+    for i < 100000{
+        fmt.Println(i);
+        b1 = b2 && b3;
+    
+      //  if (b1 == b2) || b3{
+      //      
+      //      if (b1 == b2) || b3{
+      //      }
+      //  }
 
+        b3 = (b1 == b2) || b3
+        b1 = !(b1 == b2) && !b3 || i > 22 && b1
+
+        //if !(b1 == b2) && !b3 || i > 22 && b1 {
+        //    fmt.Println(b2);
+        //}
+
+      //  if !(b1 == b2) && !b3 || i > 22 && b1{
+      //      fmt.Println(b2);
+      //  }
+
+        i = i+1
+    }
 }
 
 // OPTCODE PROBLEMS HAS_RETURNED_BRANCH CANNOT BE GLOBAL

@@ -534,7 +534,7 @@ int codegen_or(struct node *or_node) {
     if(or_node == NULL) {
         return 0;
     }
-
+    
     struct node *left = get_child(or_node, 0);
     struct node *right = get_child(or_node, 1);
 
@@ -567,6 +567,7 @@ int codegen_and(struct node *and_node) {
     if(and_node == NULL) {
         return 0;
     }
+
 
     struct node *left = get_child(and_node, 0);
     struct node *right = get_child(and_node, 1);
@@ -1194,57 +1195,43 @@ void codegen_block(struct node *block, int *has_returned_basic_block){
     }
 }
 
-void codegen_parse_args(struct node *parse_args){
-    if(parse_args == NULL){
-        return;
-    }
+void codegen_parse_args(struct node *parse_args) {
+    if(parse_args == NULL) return;
 
     struct node *left = get_child(parse_args, 0);
     struct node *right = get_child(parse_args, 1);
 
-    int right_temp = codegen_expression(right);
+    // Get index from right expression
+    int index_temp = codegen_expression(right);
 
-    // Determine variable type (local, parameter, or global)
+    int arg_ptr_temp = temporary++;
+    int arg_str_temp = temporary++;
+
+    // Get argv[index]
+    printf("  %%%d = getelementptr i8*, i8** %%argv, i32 %%%d\n", arg_ptr_temp, index_temp);
+    printf("  %%%d = load i8*, i8** %%%d\n", arg_str_temp, arg_ptr_temp);
+
+    // Convert to int
+    printf("  %%%d = call i32 @atoi(i8* %%%d)\n", temporary, arg_str_temp);
+
+    // Check scope and store result
     struct symbol_list *symbol = search_symbol(cur_scope, left->token);
-
-    // If not in current scope, check global scope
-    if(symbol == NULL){
+    if(symbol == NULL) {
+        // Global variable
         symbol = search_symbol(symbol_table, left->token);
-        if(symbol != NULL){
-            // Global variable
-            if(right->type == integer){
-                printf("  store i32 %%%d, i32* @%s\n", right_temp, left->token);
-            }
-            else{
-                printf("  %%%d = call i32 @atoi(i8* %%%d)\n", temporary, right_temp);
-                printf("  store i32 %%%d, i32* @%s\n", temporary, left->token);
-                temporary++;
-            }
+        if(symbol != NULL) {
+            // Store to global variable
+            printf("  store i32 %%%d, i32* @%s\n", temporary, left->token);
         }
-        return;
+    } else if(symbol->is_parameter) {
+        // Store to parameter address
+        printf("  store i32 %%%d, i32* %%%s.addr\n", temporary, left->token);
+    } else {
+        // Store to local variable
+        printf("  store i32 %%%d, i32* %%%s\n", temporary, left->token);
     }
 
-    if(symbol->is_parameter){
-        // For parameters, store to the local address variable
-        if(right->type == integer){
-            printf("  store i32 %%%d, i32* %%%s.addr\n", right_temp, left->token);
-        }
-        else{
-            printf("  %%%d = call i32 @atoi(i8* %%%d)\n", temporary, right_temp);
-            printf("  store i32 %%%d, i32* %%%s.addr\n", temporary, left->token);
-            temporary++;
-        }
-    } else {
-        // Local variable
-        if(right->type == integer){
-            printf("  store i32 %%%d, i32* %%%s\n", right_temp, left->token);
-        }
-        else{
-            printf("  %%%d = call i32 @atoi(i8* %%%d)\n", temporary, right_temp);
-            printf("  store i32 %%%d, i32* %%%s\n", temporary, left->token);
-            temporary++;
-        }
-    }
+    temporary++;
 }
 
 int codegen_statement(struct node *statement, int *has_returned_basic_block){
@@ -1407,6 +1394,7 @@ void codegen_main(struct node *main){
 
     struct node *func_body = get_child(main, 1);
     temporary = 0;
+    label_temporary = 0;
     // Generate the function header
     //codegen_func_header(func_header, none);
     cur_scope = (struct symbol_list *) malloc(sizeof(struct symbol_list));
@@ -1418,7 +1406,16 @@ void codegen_main(struct node *main){
         ".label%d:\n", label_temporary++
     );
 
+    // Deal with argc and argv
+    printf(
+        "  %%%d = sub i32 %%argc, 1\n", 
+        temporary++
+    );
 
+    printf("  %%argc.addr = alloca i32\n");
+//    printf("  %%argv.addr = alloca i8**\n");
+    printf("  store i32 %%argc, i32* %%argc.addr\n");
+//    printf("  store i8** %%argv, i8** %%argv.addr\n");
 
     // Generate the function body
     //has_returned_function = 0;
