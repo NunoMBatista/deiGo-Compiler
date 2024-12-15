@@ -14,8 +14,8 @@ This report describes the development of a compiler for the deiGo language, carr
 ## Grammar
 
 ### Handling of Optional and Repeated Elements
-Optional and repeated elements are handled through specific grammar rules that define alternatives for their presence or absence. By explicitly defining optional elements, we ensure that the parser can correctly handle cases where certain elements are missing. This is essential for maintaining the correctness of the AST later on. By using optional nodes, we can easily append new declarations to the existing list. For
-example:
+Optional and repeated elements are handled through specific grammar rules that define alternatives for their presence or absence. By explicitly defining optional elements, we ensure that the parser can correctly handle cases where certain elements are missing. This is essential for maintaining the correctness of the AST later on. By using optional nodes, we can easily append new declarations to the existing list. 
+For example:
 
 ```
 VarSpec → IDENTIFIER {COMMA IDENTIFIER} Type
@@ -37,7 +37,7 @@ This rule, designed to manage repeated identifiers separated by commas, is parti
 
 ### Optimization and Readability
 We define operator precedence and associativity explicitly to resolve ambiguities. This ensures that expressioons are parsed correctly according to the deiGo language specifications.
-Examples of the transcription of the initnal grammar in EBNF notation to the Yacc format:
+Examples of the transcription of the initial grammar in EBNF notation to the Yacc format:
 
 ```
 Declarations → {VarDeclaration SEMICOLON | FuncDeclaration SEMICOLON}
@@ -81,14 +81,24 @@ For example, in this rule, the `FuncInvocation` non-terminal includes an alterna
 ## AST/Symbol Table Algorithms and Data Structures
 
 ### Auxiliary AST Nodes
-In our grammar, we use auxiliary (AUX) nodes to store the children of nodes with an undefined number of children. This approach helps in managing optional and repeated elements by acting as a container 3 for multiple instances of a particular non-terminal. This function has the main goal of maintaining a clear and organized AST. By grouping related nodes under an Aux node we can ensure that the tree structure is easy to traverse and understand. As this is a temporary container, at the end of the syntax analysis, we perform a DFS traversal to append the AUX nodes' children to their respective parent nodes, using the `remove_aux` function.
+In our grammar, we use auxiliary (AUX) nodes to store the children of nodes with an undefined number of children. This approach helps in managing optional and repeated elements by acting as a container for multiple instances of a particular non-terminal. This has the main goal of maintaining a clear and organized AST. By grouping related nodes under an Aux node we can ensure that the tree structure is easy to traverse and understand. As this is a temporary container, at the end of the syntax analysis, we perform a DFS traversal to append the AUX nodes' children to their respective parent nodes, using the `remove_aux` function.
 For example, this would be an AST substructure when parsing the function f(C1, C2):
 
 ![AST_graph](ASTexample.png)
 
 ### LOCATE
 This macro serves as a way to store the lines and columns of a specific node. In this way we can identify the nodes that are responsible for creating semantic errors.
+Example of its use:
 
+```c
+Expr : Expr OR Expr                                            
+{
+    $$ = new_node(Or, NULL);
+    add_child($$, $1);
+    add_child($$, $3);
+    LOCATE($$, @2.first_line, @2.first_column);
+}
+```
 ### AST Structs
 
 #### Node Struct
@@ -106,10 +116,10 @@ struct node {
 
 | Member          | Description                                                                 |
 |-----------------|-----------------------------------------------------------------------------|
-| category        | An enum representing the category of  the node.                              |
+| category        | An enum representing the category of  the node.                             |
 | token           | A string representing the lexical token associated with the node.           |
-| token_line      | Integers storing the line and column numbers of the token, useful for error reporting. |
-| token_column    | Integers storing the line and column numbers of the token, useful for error reporting. |
+| token_line      | Integer storing the line number of the token, useful for error reporting.   |
+| token_column    | Integer storing the column number of the token, useful for error reporting. |
 | type            | An enum representing the type of the node.                                  |
 | parameter_list  | A string representing the list of parameters for function nodes.            |
 | children        | A pointer to a `node_list` struct, representing the children of this node.  |
