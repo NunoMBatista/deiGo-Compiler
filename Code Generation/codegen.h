@@ -4,35 +4,11 @@
 #include "ast.h"
 #include "semantics.h"
 
-/*
-TODO:
-
-We need to keep track of an has_returned_branch variable for
-EVERY branch in order to add "br label %return%" at the end 
-of the L0 branch 
-
-Maybe keep a dynamic stack with a node per nested branch
-we only set has_returned_function to 1 if the stack is empty
-and a return instruction is called 
-
-JUST KEEP A GLOBAL COUNTER
-*/
-// struct block_stack {
-//     struct block_stack *next;
-// };
-
-// int stack_size(struct block_stack *stack);
-// void push_block(struct block_stack **stack);
-// void pop_block(struct block_stack **stack);
-// void clean_block_stack(struct block_stack **stack);
-
 char* llvm_types(enum type type);
-
 void codegen_program(struct node *program);
-
 void codegen_function(struct node * function);
 void codegen_func_header(struct node *func_header, enum type return_type);
-int codegen_statement(struct node *statement, int *has_returned_basic_block);
+int codegen_statement(struct node *statement, int *has_returned_basic_block, int is_tail);
 int codegen_expression(struct node *expression);
 void codegen_body(struct node *func_body, int *has_returned_basic_block);
 int codegen_natural(struct node *natural_node);
@@ -57,12 +33,11 @@ int codegen_gt(struct node *gt);
 int codegen_le(struct node *le);
 int codegen_ge(struct node *ge);
 int codegen_eq(struct node *eq);
-int codegen_call(struct node *call, int is_expr);
+int codegen_call(struct node *call, int is_expr, int is_tail);
 void codegen_return(struct node *return_node);
 void codegen_if(struct node *if_node, int *has_returned_basic_block);
 void codegen_block(struct node *block, int *has_returned_basic_block);
 void codegen_for(struct node *for_node, int *has_returned_basic_block);
 void codegen_parse_args(struct node *parse_args);
-struct symbol_list *get_scope(char *identifier);
 
 #endif

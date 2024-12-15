@@ -1,24 +1,28 @@
 package main;
 
 // PROBLEM WHEN RETURNING AT THE END OF A FOR BLOCK WITH CONDITION
-
-var a float32;
+func factorial(n int, acc int) int {
+    if n == 0 {
+        return acc;
+    } else {
+        return factorial(n - 1, n * acc);
+    }
+}
 func main() { 
-    var i float32;
-    i = 243e2
-    i = 113.3e-9
-    i = i
-    i = -.0
-    i = -332.3333 - 4.2
-    i = -124e-2
-    i = -i
-    var b int;
-    a = -a
-    b,_ = strconv.Atoi(os.Args[1]);
-    fmt.Println(b);
-    fmt.Println(as);
-    fmt.Println(4213e305)
+    var i int;
+    var b1, b2, b3 bool;
+    i = 1    
+    
+    b3 = 1==1;
+    for i < 1{
+        fmt.Println(i);
+        b1 = b2 && b3;
+    
+        b3 = (b1 == b2) || b3
+        b1 = !(b1 == b2) && !b3 || i > 22 && b1
 
+        i = i+1
+    }
 }
 
 // OPTCODE PROBLEMS HAS_RETURNED_BRANCH CANNOT BE GLOBAL
